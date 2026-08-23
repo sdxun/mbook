@@ -351,7 +351,7 @@ details[open] summary::before{content:"▾ ";}
     <div class="card" id="budgetCard">
       <h3>🎯 每月预算</h3>
       <div class="budget-row">
-        <input id="budgetInput" type="text" inputmode="decimal" placeholder="输入预算金额">
+        <input id="budgetInput" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="输入预算金额（整数）" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
         <button class="btn-ghost small" id="budgetSaveBtn" onclick="saveBudget()">保存</button>
         <button class="btn-ghost small" id="budgetEditBtn" onclick="editBudget()" style="display:none">修改</button>
       </div>
@@ -451,6 +451,15 @@ details[open] summary::before{content:"▾ ";}
   <div class="sheet-head"><span class="st" id="catDetailTitle">分类明细</span><button onclick="closeCatDetail()">完成</button></div>
   <div class="cat-detail-list" id="catDetailList"></div>
   <div class="cat-detail-sum" id="catDetailSum"></div>
+</div>
+
+<div class="sheet-mask" id="quickMask" onclick="closeQuick()"></div>
+<div class="sheet" id="quickSheet">
+  <div class="sheet-head"><span class="st">📋 快速记账</span><button onclick="closeQuick()">取消</button></div>
+  <div class="field"><label>金额</label><input id="quickAmt" type="text" inputmode="decimal" placeholder="如：23.5"></div>
+  <div class="field"><label>商户</label><input id="quickMerchant" type="text" placeholder="如：瑞幸咖啡"></div>
+  <div class="field"><label>分类（可留空自动识别）</label><input id="quickCat" type="text" placeholder="如：餐饮 或 🍜"></div>
+  <button class="btn-primary" style="margin-top:14px;width:100%" onclick="quickSave()">填入记账表单</button>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -669,17 +678,25 @@ function amtOp(op){
 }
 /* ============ 快捷指令 ============ */
 function quickFill(){
-  if(navigator.clipboard && navigator.clipboard.readText){
-    navigator.clipboard.readText().then(function(text){
-      if(!text){ toast('剪贴板是空的'); return; }
-      parseQuick(text);
-    }).catch(function(){
-      toast('无法读取剪贴板，请重试');
-      fillFromUrl(); /* 兜底：尝试 URL 参数 */
-    });
-  } else {
-    fillFromUrl();
-  }
+  /* 弹出三框：金额 / 商户 / 分类 */
+  document.getElementById('quickAmt').value = '';
+  document.getElementById('quickMerchant').value = '';
+  document.getElementById('quickCat').value = '';
+  document.getElementById('quickMask').classList.add('show');
+  document.getElementById('quickSheet').classList.add('show');
+  document.getElementById('quickAmt').focus();
+}
+function closeQuick(){
+  document.getElementById('quickMask').classList.remove('show');
+  document.getElementById('quickSheet').classList.remove('show');
+}
+function quickSave(){
+  const amt = document.getElementById('quickAmt').value.trim();
+  if(!amt){ toast('请输入金额'); return; }
+  const merchant = document.getElementById('quickMerchant').value.trim();
+  const cat = document.getElementById('quickCat').value.trim();
+  parseQuick(amt + (merchant ? ' ' + merchant : '') + (cat ? ' ' + cat : ''));
+  closeQuick();
 }
 function parseQuick(text){
   text = String(text).trim();
@@ -1595,13 +1612,13 @@ function setStatRange(r){ // 兼容旧调用
   setStatMode(r);
 }
 function saveBudget(){
-  const v = parseFloat(document.getElementById('budgetInput').value);
+  const v = parseInt(document.getElementById('budgetInput').value, 10);
   if(!v || v <= 0){ toast('请输入有效预算金额'); return; }
   const key = 'm'+statM; // 每月预算，按月份存，跨年统一
-  budget[key] = Math.round(v*100);
+  budget[key] = v*100;  // 整数元 → 分
   localStorage.setItem(KEY_BUDGET, JSON.stringify(budget));
   renderStats();
-  toast('预算已保存：'+statM+1+'月 ¥'+fmtFen(Math.round(v*100)));
+  toast('预算已保存：'+statM+1+'月 ¥'+fmtFen(v*100));
 }
 function renderBudget(exp){
   const key = 'm'+statM; // 每月预算：按月份存
@@ -1644,7 +1661,7 @@ function renderBudget(exp){
 function editBudget(){
   const key = 'm'+statM;
   const b = budget[key];
-  document.getElementById('budgetInput').value = b ? fmtFen(b) : '';
+  document.getElementById('budgetInput').value = b ? String(Math.round(b/100)) : '';
   document.getElementById('budgetInput').style.display = '';
   document.getElementById('budgetSaveBtn').style.display = '';
   document.getElementById('budgetEditBtn').style.display = 'none';
