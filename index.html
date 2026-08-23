@@ -1204,7 +1204,7 @@ function parseWeChat(rows){
     const row = rows[r];
     if(row.length <= Math.max(ci.amount, ci.status)) continue;
     const st = row[ci.status];
-    if(!st.includes('支付成功') && !st.includes('已存入') && !st.includes('已到账') && !st.includes('已收')) continue;
+    if(!st.includes('支付成功') && !st.includes('已存入') && !st.includes('已到账') && !st.includes('已收') && !st.includes('退款')) continue;
     const fen = yuanToFen(row[ci.amount]);
     if(fen === null || fen <= 0) continue;
     const t = row[ci.type];
