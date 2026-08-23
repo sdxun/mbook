@@ -562,7 +562,8 @@ function renderList(){
     const dayExp = arr.filter(t=>t.type==='expense').reduce((a,t)=>a+t.fen,0);
     const g = el('div','day-group');
     const head = el('div','day-head');
-    const ds = el('span','ds', day);
+    const dd = new Date(day+'T00:00:00');
+    const ds = el('span','ds', (dd.getMonth()+1)+'月'+dd.getDate()+'日 '+WEEK[dd.getDay()]);
     const dv = el('span','dv', dayExp ? '支出 −¥'+fmtFen(dayExp) : '');
     head.append(ds, dv);
     g.appendChild(head);
@@ -581,7 +582,7 @@ function txRow(t){
   const right = el('div', null);
   right.appendChild(el('div','tx-amt '+(t.type==='expense'?'red':'green'), (t.type==='expense'?'−':'+')+'¥'+fmtFen(t.fen)));
   const dt = new Date(t.date);
-  right.appendChild(el('div','tx-time', (dt.getMonth()+1)+'/'+dt.getDate()+' '+WEEK[dt.getDay()]));
+  right.appendChild(el('div','tx-time', pad2(dt.getHours())+':'+pad2(dt.getMinutes())));
   row.appendChild(right);
   row.onclick = () => openEdit(t.id);
   return row;
