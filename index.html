@@ -7,6 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="随手记">
 <meta name="theme-color" content="#f5f6fa">
+<link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <title>随手记</title>
@@ -211,22 +212,6 @@ details[open] summary::before{content:"▾ ";}
     <div class="card"><h3>近 7 天支出</h3><div class="bar-chart" id="barChart"></div></div>
     <div class="card"><h3>本月支出分类</h3><div id="catBreak"></div></div>
     <div class="card"><h3>本月收入分类</h3><div id="incBreak"></div></div>
-    <div class="card">
-      <button class="btn-ghost" onclick="exportCSV()">📤 导出数据（CSV）</button>
-      <button class="btn-ghost" onclick="exportBackup()">💾 备份全部数据</button>
-      <button class="btn-ghost" onclick="document.getElementById('backupInput').click()">📥 导入备份</button>
-      <input type="file" id="backupInput" accept=".json,application/json" style="display:none">
-      <button class="btn-ghost danger" onclick="clearAll()">🗑 清空所有数据</button>
-    </div>
-  </section>
-
-    <div class="card">
-      <button class="btn-ghost" onclick="exportCSV()">📤 导出数据（CSV）</button>
-      <button class="btn-ghost" onclick="exportBackup()">💾 备份全部数据</button>
-      <button class="btn-ghost" onclick="document.getElementById('backupInput').click()">📥 导入备份</button>
-      <input type="file" id="backupInput" accept=".json,application/json" style="display:none">
-      <button class="btn-ghost danger" onclick="clearAll()">🗑 清空所有数据</button>
-    </div>
   </section>
 
   <!-- 自动记账 -->
@@ -253,6 +238,14 @@ details[open] summary::before{content:"▾ ";}
       <div id="ruleList"></div>
       <button class="btn-ghost small" onclick="clearLearned()">清空学习规则</button>
     </details>
+    <div class="card">
+      <h3>💾 数据管理</h3>
+      <button class="btn-ghost" onclick="exportCSV()">📤 导出数据（CSV）</button>
+      <button class="btn-ghost" onclick="exportBackup()">💾 备份全部数据</button>
+      <button class="btn-ghost" onclick="document.getElementById('backupInput').click()">📥 导入备份</button>
+      <input type="file" id="backupInput" accept=".json,application/json" style="display:none">
+      <button class="btn-ghost danger" onclick="clearAll()">🗑 清空所有数据</button>
+    </div>
   </section>
 </main>
 
@@ -927,6 +920,10 @@ document.getElementById('dateInput').value = todayStr();
 buildCatGrid();
 renderList();
 renderRules();
+/* PWA：注册 service worker，支持离线 */
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('./sw.js').catch(function(){ /* 不支持时静默 */ });
+}
 </script>
 </body>
 </html>

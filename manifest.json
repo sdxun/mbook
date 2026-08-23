@@ -1,0 +1,19 @@
+{
+  "name": "随手记",
+  "short_name": "随手记",
+  "description": "本地记账：支付宝/微信账单导入，自动分类",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f5f6fa",
+  "theme_color": "#007aff",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
