@@ -218,6 +218,15 @@ details[open] summary::before{content:"▾ ";}
 /* toast */
 .toast{position:fixed;left:50%;bottom:110px;transform:translateX(-50%) translateY(20px);background:rgba(0,0,0,.78);color:#fff;padding:11px 22px;border-radius:24px;font-size:14px;z-index:99;opacity:0;transition:all .3s;pointer-events:none;white-space:nowrap;max-width:86vw;overflow:hidden;text-overflow:ellipsis;}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+.cat-detail-list{max-height:45vh;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.cd-row{display:flex;align-items:center;gap:8px;padding:10px 2px;border-bottom:1px solid var(--line)}
+.cd-time{font-size:12px;color:var(--sub);flex-shrink:0;width:86px}
+.cd-merchant{flex:1;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cd-amt{font-size:14px;font-weight:600;flex-shrink:0}
+.cd-del{flex-shrink:0;font-size:12px;color:#e53935;background:none;border:1px solid #e53935;border-radius:6px;padding:3px 8px}
+.cat-detail-sum{margin-top:10px;padding:10px;background:var(--card2,#f5f5f5);border-radius:8px;font-size:13px;color:var(--sub);text-align:center}
+.sb-row{cursor:pointer}
+.pie-li{cursor:pointer}
 </style>
   <!-- 禁止双指缩放 / 双击缩放（iOS Safari 忽略 viewport user-scalable） -->
   <script>
@@ -435,6 +444,13 @@ details[open] summary::before{content:"▾ ";}
   <div class="field"><label>日期（选「整天」则清空整月）</label><input id="clearDateSel" type="date" value=""></div>
   <div id="clearCount" class="clear-count"></div>
   <button class="btn-primary danger" style="margin-top:14px;" onclick="doClearRange()">确认清理</button>
+</div>
+
+<div class="sheet-mask" id="catDetailMask" onclick="closeCatDetail()"></div>
+<div class="sheet" id="catDetailSheet">
+  <div class="sheet-head"><span class="st" id="catDetailTitle">分类明细</span><button onclick="closeCatDetail()">完成</button></div>
+  <div class="cat-detail-list" id="catDetailList"></div>
+  <div class="cat-detail-sum" id="catDetailSum"></div>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -1739,6 +1755,7 @@ function renderStats(){
   const total = entries.reduce((a,e)=>a+e[1],0);
   entries.forEach(([cat, fen]) => {
     const row = el('div','sb-row');
+    row.onclick = () => openCatDetail(cat, 'expense');
     row.appendChild(el('span','sb-label', catIcon(cat)+' '+cat));
     const track = el('div','sb-track');
     const fill = el('div','sb-fill');
@@ -1758,6 +1775,7 @@ function renderStats(){
   const itotal = ientries.reduce((a,e)=>a+e[1],0);
   ientries.forEach(([cat, fen]) => {
     const row = el('div','sb-row');
+    row.onclick = () => openCatDetail(cat, 'income');
     row.appendChild(el('span','sb-label', catIcon(cat)+' '+cat));
     const track = el('div','sb-track');
     const fill = el('div','sb-fill');
@@ -1811,6 +1829,7 @@ function renderPie(){
   legend.innerHTML = '';
   entries.forEach((e,i) => {
     const row = el('div','pie-li');
+    row.onclick = () => openCatDetail(e[0], pieType);
     row.appendChild(el('span','pie-dot', '', 'background:'+PIE_COLORS[i%PIE_COLORS.length]));
     row.appendChild(el('span','pie-name', catIcon(e[0])+' '+e[0]));
     row.appendChild(el('span','pie-pct', Math.round(e[1]/total*100)+'%'));
@@ -1900,6 +1919,51 @@ function openClearRange(){
   document.getElementById('clearMask').classList.add('show');
   document.getElementById('clearSheet').classList.add('show');
 }
+/* 统计页分类下钻：查看某分类明细 */
+function openCatDetail(cat, type){
+  const y = statY, m = statM;
+  const inRange = statMode === 'year'
+    ? t => new Date(t.date).getFullYear()===y
+    : t => { const d = new Date(t.date); return d.getFullYear()===y && d.getMonth()===m; };
+  const list = txs.filter(t => t.type===type && t.cat===cat && inRange(t)).sort((a,b)=>b.date-a.date);
+  const pre = statMode==='year' ? y+'年' : y+'年'+(m+1)+'月';
+  document.getElementById('catDetailTitle').textContent = pre+' '+catIcon(cat)+' '+cat+' 明细';
+  const box = document.getElementById('catDetailList');
+  box.innerHTML = '';
+  if(!list.length){
+    box.appendChild(el('div','empty','该分类暂无账单'));
+  } else {
+    const total = list.reduce((a,t)=>a+t.fen,0);
+    list.forEach(t => {
+      const row = el('div','cd-row');
+      row.appendChild(el('span','cd-time', fmtDateTime(t.date)));
+      row.appendChild(el('span','cd-merchant', t.merchant || t.note || cat));
+      const amt = el('span','cd-amt', (t.type==='expense'?'-':'+')+'¥'+fmtFen(t.fen));
+      row.appendChild(amt);
+      const del = el('button','cd-del','删除');
+      del.onclick = () => {
+        if(confirm('删除这笔账单？')){
+          txs = txs.filter(x => x.id !== t.id);
+          saveTxs();
+          openCatDetail(cat, type);
+          renderStats();
+          fillMonthSelect();
+          renderList();
+        }
+      };
+      row.appendChild(del);
+      box.appendChild(row);
+    });
+    document.getElementById('catDetailSum').textContent = '合计 '+(type==='expense'?'支出':'收入')+' ¥'+fmtFen(total)+' · '+list.length+' 笔';
+  }
+  document.getElementById('catDetailMask').classList.add('show');
+  document.getElementById('catDetailSheet').classList.add('show');
+}
+function closeCatDetail(){
+  document.getElementById('catDetailMask').classList.remove('show');
+  document.getElementById('catDetailSheet').classList.remove('show');
+}
+
 function closeClearRange(){
   document.getElementById('clearMask').classList.remove('show');
   document.getElementById('clearSheet').classList.remove('show');
