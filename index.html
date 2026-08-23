@@ -364,10 +364,10 @@ details[open] summary::before{content:"▾ ";}
       <p><b>微信</b>：我 → 服务 → 钱包 → 账单 → 常见问题 → 下载账单 → 个人对账（发到邮箱）</p>
     </div>
     <div class="card">
-      <button class="btn-primary" onclick="document.getElementById('fileInput').click()">📂 选择账单 CSV 文件</button>
-      <input type="file" id="fileInput" accept=".csv,text/csv,text/plain" style="display:none">
+      <button class="btn-primary" onclick="document.getElementById('fileInput').click()">📂 导入账单文件（CSV / XLSX）</button>
+      <input type="file" id="fileInput" accept=".csv,.xlsx,text/csv,text/plain,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" style="display:none">
       <div class="or">— 或 —</div>
-      <textarea id="pasteBox" placeholder="把支付宝 / 微信账单的 CSV 文本粘贴到这里…"></textarea>
+      <textarea id="pasteBox" placeholder="把支付宝 / 微信账单的 CSV 文本粘贴到这里…（xlsx 请用上方按钮选择文件）"></textarea>
       <div class="row2">
         <button class="btn-ghost small" onclick="fillSample('wechat')">填入微信示例</button>
         <button class="btn-ghost small" onclick="fillSample('alipay')">填入支付宝示例</button>
@@ -1316,7 +1316,7 @@ function parsePaste(){
 }
 function handleParsed(text){
   // 检测 zip 压缩包（PK 开头）→ 引导用户解压
-  if(text.startsWith('PK')){ toast('这是 zip 压缩包！请先解压（密码：身份证后 6 位），导入里面的 csv 文件'); return; }
+  if(text.startsWith('PK')){ toast('检测到 xlsx/zip 文件内容，请用上方「📂 导入账单文件」按钮直接选择该文件'); return; }
   const rows = parseCSV(text);
   let bills = null;
   if(rows.length){ bills = parseAlipay(rows) || parseWeChat(rows); }
