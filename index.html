@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="format-detection" content="telephone=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="随手记">
@@ -13,6 +14,7 @@
 <title>随手记</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{touch-action:manipulation;-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%;}
 :root{
   --bg:#f5f6fa;--card:#fff;--text:#1c1c1e;--sub:#8e8e93;
   --line:rgba(0,0,0,.08);--primary:#007aff;--red:#ff3b30;--green:#34c759;
@@ -96,16 +98,19 @@ main{padding:12px 16px calc(100px + env(safe-area-inset-bottom));}
 .search{width:100%;padding:11px 14px;border:1px solid var(--line);border-radius:12px;background:var(--card);font-size:14px;color:var(--text);outline:none;margin-bottom:12px;}
 .search:focus{border-color:var(--primary);}
 .day-group{margin-bottom:8px;}
-.day-head{display:flex;justify-content:space-between;font-size:12px;color:var(--sub);padding:10px 4px 4px;}
-.day-head .ds{font-weight:600;color:var(--text);}
+.day-head{display:flex;justify-content:space-between;align-items:baseline;font-size:13px;color:var(--sub);padding:10px 4px 4px;}
+.day-head .ds{font-weight:600;color:var(--text);font-size:14px;}
+.day-head .dv{font-size:12px;}
 .tx-row{display:flex;align-items:center;gap:12px;padding:11px 4px;border-bottom:1px solid var(--line);cursor:pointer;}
 .tx-row:last-child{border-bottom:none;}
 .tx-ic{width:38px;height:38px;border-radius:12px;background:var(--primary-bg);display:flex;align-items:center;justify-content:center;font-size:19px;flex-shrink:0;}
 .tx-main{flex:1;min-width:0;}
 .tx-merchant{font-size:15px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .tx-note{font-size:12px;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.tx-right{display:flex;flex-direction:column;align-items:flex-end;gap:3px;flex-shrink:0;margin-left:auto;}
 .tx-amt{font-size:15px;font-weight:600;font-variant-numeric:tabular-nums;}
-.tx-time{font-size:11px;color:var(--sub);margin-top:2px;}
+.tx-time{font-size:11px;color:var(--sub);}
+.h-nav select{font-size:16px;font-weight:600;color:var(--text);}
 .empty{text-align:center;color:var(--sub);padding:60px 0;font-size:14px;}
 /* tabbar */
 .tabbar{position:fixed;bottom:0;left:0;right:0;display:flex;background:var(--tabbar);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom);z-index:50;}
@@ -182,6 +187,16 @@ details[open] summary::before{content:"▾ ";}
 .toast{position:fixed;left:50%;bottom:110px;transform:translateX(-50%) translateY(20px);background:rgba(0,0,0,.78);color:#fff;padding:11px 22px;border-radius:24px;font-size:14px;z-index:99;opacity:0;transition:all .3s;pointer-events:none;white-space:nowrap;max-width:86vw;overflow:hidden;text-overflow:ellipsis;}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
 </style>
+  <!-- 禁止双指缩放 / 双击缩放（iOS Safari 忽略 viewport user-scalable） -->
+  <script>
+  document.addEventListener('gesturestart', function(e){ e.preventDefault(); }, {passive:false});
+  document.addEventListener('gesturechange', function(e){ e.preventDefault(); }, {passive:false});
+  document.addEventListener('gestureend', function(e){ e.preventDefault(); }, {passive:false});
+  document.addEventListener('dblclick', function(e){ e.preventDefault(); }, {passive:false});
+  document.addEventListener('touchmove', function(e){
+    if(e.touches.length > 1) e.preventDefault();
+  }, {passive:false});
+  </script>
 </head>
 <body>
 
@@ -504,9 +519,13 @@ let viewY = new Date().getFullYear(), viewM = new Date().getMonth();
 let filter = 'all', searchQ = '';
 const WEEK = ['周日','周一','周二','周三','周四','周五','周六'];
 function txYears(){
-  const s = new Set(txs.map(t => new Date(t.date).getFullYear()));
-  s.add(new Date().getFullYear()); // 永远包含今年
-  return [...s].sort((a,b)=>a-b);
+  const years = new Set(txs.map(t => new Date(t.date).getFullYear()));
+  years.add(new Date().getFullYear()); // 永远包含今年
+  if(!years.size) return [new Date().getFullYear()];
+  const min = Math.min(...years), max = Math.max(...years);
+  const out = [];
+  for(let y = min; y <= max; y++) out.push(y); // 连续覆盖，中间空年也显示
+  return out;
 }
 function fillMonthSelect(){
   const ys = document.getElementById('listYearSel');
@@ -583,7 +602,7 @@ function renderList(){
     const g = el('div','day-group');
     const head = el('div','day-head');
     const dd = new Date(day+'T00:00:00');
-    const ds = el('span','ds', (dd.getMonth()+1)+'月'+dd.getDate()+'日 '+WEEK[dd.getDay()]);
+    const ds = el('span','ds', dd.getFullYear()+'年'+(dd.getMonth()+1)+'月'+dd.getDate()+'日 '+WEEK[dd.getDay()]);
     const dv = el('span','dv', dayExp ? '支出 −¥'+fmtFen(dayExp) : '');
     head.append(ds, dv);
     g.appendChild(head);
@@ -599,7 +618,7 @@ function txRow(t){
   main.appendChild(el('div','tx-merchant', t.merchant || t.cat));
   if(t.note) main.appendChild(el('div','tx-note', t.note));
   row.appendChild(main);
-  const right = el('div', null);
+  const right = el('div','tx-right');
   right.appendChild(el('div','tx-amt '+(t.type==='expense'?'red':'green'), (t.type==='expense'?'−':'+')+'¥'+fmtFen(t.fen)));
   const dt = new Date(t.date);
   right.appendChild(el('div','tx-time', pad2(dt.getHours())+':'+pad2(dt.getMinutes())));
@@ -958,8 +977,8 @@ function fillStatSelects(){
     mh += '<option value="'+m+'"'+(m===statM?' selected':'')+'>'+(m+1)+'月</option>';
   }
   ms.innerHTML = mh;
-  ys.onchange = () => { statY = parseInt(ys.value); renderStats(); };
-  ms.onchange = () => { statM = parseInt(ms.value); renderStats(); };
+  ys.onchange = () => { statY = parseInt(ys.value); fillStatSelects(); renderStats(); };
+  ms.onchange = () => { statM = parseInt(ms.value); fillStatSelects(); renderStats(); };
 }
 function setStatRange(r){ // 兼容旧调用
   setStatMode(r);
@@ -967,26 +986,38 @@ function setStatRange(r){ // 兼容旧调用
 function saveBudget(){
   const v = parseFloat(document.getElementById('budgetInput').value);
   if(!v || v <= 0){ toast('请输入有效预算金额'); return; }
-  const key = statY+'-'+statM;
+  const key = 'm'+statM; // 每月预算，按月份存，跨年统一
   budget[key] = Math.round(v*100);
   localStorage.setItem(KEY_BUDGET, JSON.stringify(budget));
   renderStats();
-  toast('预算已保存：'+key);
+  toast('预算已保存：'+statM+1+'月 ¥'+fmtFen(Math.round(v*100)));
 }
 function renderBudget(exp){
-  const key = statY+'-'+statM;
-  const b = budget[key];
+  const key = 'm'+statM; // 每月预算：按月份存
+  let b = budget[key];
+  if(b === undefined){ // 迁移旧版键（statY-statM 格式）
+    const legacy = Object.keys(budget).find(k => k.endsWith('-'+statM));
+    if(legacy !== undefined){ b = budget[legacy]; budget[key] = b; localStorage.setItem(KEY_BUDGET, JSON.stringify(budget)); }
+  }
   const bar = document.getElementById('budgetBar');
   const info = document.getElementById('budgetInfo');
   const input = document.getElementById('budgetInput');
   const btn = document.getElementById('budgetSaveBtn');
   const editBtn = document.getElementById('budgetEditBtn');
+  if(statMode === 'year'){
+    input.style.display = 'none';
+    btn.style.display = 'none';
+    editBtn.style.display = 'none';
+    bar.innerHTML = '';
+    info.textContent = '预算按月计算，切到「月」模式查看';
+    return;
+  }
   if(!b){
     input.style.display = '';
     btn.style.display = '';
     editBtn.style.display = 'none';
     bar.innerHTML = '';
-    info.textContent = '设置预算后，这里显示剩余比例';
+    info.textContent = '设置每月预算后，这里显示剩余比例';
     return;
   }
   input.style.display = 'none';
@@ -1000,7 +1031,7 @@ function renderBudget(exp){
   info.textContent = '已用 '+pct+'%，'+remTxt+'（预算 ¥'+fmtFen(b)+'）';
 }
 function editBudget(){
-  const key = statY+'-'+statM;
+  const key = 'm'+statM;
   const b = budget[key];
   document.getElementById('budgetInput').value = b ? fmtFen(b) : '';
   document.getElementById('budgetInput').style.display = '';
@@ -1109,7 +1140,7 @@ function renderStats(){
   const byCat = {};
   rangeTxs.filter(t=>t.type==='expense').forEach(t => { byCat[t.cat] = (byCat[t.cat]||0) + t.fen; });
   const entries = Object.entries(byCat).sort((a,b)=>b[1]-a[1]);
-  if(!entries.length){ brk.appendChild(el('div','empty',pre+'暂无支出')); return; }
+  if(!entries.length){ brk.appendChild(el('div','empty',pre+'暂无支出')); }
   const total = entries.reduce((a,e)=>a+e[1],0);
   entries.forEach(([cat, fen]) => {
     const row = el('div','sb-row');
@@ -1128,7 +1159,7 @@ function renderStats(){
   const byIncCat = {};
   rangeTxs.filter(t=>t.type==='income').forEach(t => { byIncCat[t.cat] = (byIncCat[t.cat]||0) + t.fen; });
   const ientries = Object.entries(byIncCat).sort((a,b)=>b[1]-a[1]);
-  if(!ientries.length){ ibrk.appendChild(el('div','empty',pre+'暂无收入')); return; }
+  if(!ientries.length){ ibrk.appendChild(el('div','empty',pre+'暂无收入')); }
   const itotal = ientries.reduce((a,e)=>a+e[1],0);
   ientries.forEach(([cat, fen]) => {
     const row = el('div','sb-row');
