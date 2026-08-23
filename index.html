@@ -944,6 +944,231 @@ function parseAlipay(rows){
   return bills.length ? bills : null;
 }
 /* 微信：交易时间,交易类型,交易对方,商品,收/支,金额(元),支付方式,当前状态,交易单号,商户单号,备注 */
+
+/* ============ 微信 xlsx（zip）解析：手写 inflate + zip + XML 行数组 ============ */
+function inflateRaw(data){
+  let pos = 0;
+  const out = [];
+  const bitBuf = { b:0, n:0 };
+  let guard = 0;
+  function bits(n){
+    while(bitBuf.n < n){
+      if(pos >= data.length) throw new Error('EOF');
+      bitBuf.b |= ((data[pos++] & 0xFF) << bitBuf.n); bitBuf.n += 8;
+    }
+    const v = bitBuf.b & ((1<<n)-1);
+    bitBuf.b >>>= n; bitBuf.n -= n;
+    return v;
+  }
+  function buildTable(lengths){
+    const max = Math.max(...lengths, 0);
+    const counts = new Array(max+1).fill(0);
+    for(const l of lengths) if(l) counts[l]++;
+    const pairs = [];
+    for(let i=0;i<lengths.length;i++) if(lengths[i]) pairs.push({sym:i, len:lengths[i]});
+    pairs.sort((a,b) => a.len - b.len || a.sym - b.sym);
+    const symbols = [];
+    let code = 0, prevLen = 0;
+    for(const p of pairs){
+      if(p.len !== prevLen){ code <<= (p.len - prevLen); prevLen = p.len; }
+      symbols.push({sym:p.sym, code});
+      code++;
+    }
+    return {counts, symbols, max};
+  }
+  function decode(tbl){
+    let code = 0, first = 0, index = 0;
+    for(let len = 1; len <= tbl.max; len++){
+      code |= bits(1);
+      const count = tbl.counts[len] || 0;
+      if(code - first < count) return tbl.symbols[index + (code - first)].sym;
+      index += count;
+      first = (first + count) << 1;
+      code <<= 1;
+    }
+    throw new Error('huffman');
+  }
+  const LEN_BASE = [3,4,5,6,7,8,9,10,11,13,15,17,19,23,27,31,35,43,51,59,67,83,99,115,131,163,195,227,258];
+  const LEN_EXT  = [0,0,0,0,0,0,0,0,1,1,1,1,2,2,2,2,3,3,3,3,4,4,4,4,5,5,5,5,0];
+  const DIST_BASE = [1,2,3,4,5,7,9,13,17,25,33,49,65,97,129,193,257,385,513,769,1025,1537,2049,3073,4097,6145,8193,12289,16385,24577];
+  const DIST_EXT  = [0,0,0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,8,8,9,9,10,10,11,11,12,12,13,13];
+  const CLEN_ORDER = [16,17,18,0,8,7,9,6,10,5,11,4,12,3,13,2,14,1,15];
+  const fixedLit = new Array(288).fill(8); fixedLit.fill(9, 144, 256); fixedLit.fill(7, 256, 280);
+  const fixedDist = new Array(30).fill(5);
+  const fLit = buildTable(fixedLit), fDist = buildTable(fixedDist);
+  for(;;){
+    if(++guard > 1000000) throw new Error('guard');
+    const bfinal = bits(1);
+    const btype = bits(2);
+    if(btype === 0){
+      bitBuf.b = 0; bitBuf.n = 0;
+      if(pos+4 > data.length) throw new Error('stored');
+      const len = data[pos] | (data[pos+1]<<8); pos += 4;
+      if(pos+len > data.length) throw new Error('stored2');
+      for(let i=0;i<len;i++) out.push(data[pos++]);
+    } else if(btype === 1 || btype === 2){
+      let litT = fLit, distT = fDist;
+      if(btype === 2){
+        const hlit = bits(5)+257, hdist = bits(5)+1, hclen = bits(4)+4;
+        const clens = new Array(19).fill(0);
+        for(let i=0;i<hclen;i++) clens[CLEN_ORDER[i]] = bits(3);
+        const cTbl = buildTable(clens);
+        const lens = [];
+        while(lens.length < hlit+hdist){
+          const sym = decode(cTbl);
+          if(sym < 16) lens.push(sym);
+          else if(sym === 16){ const r = lens.length ? lens[lens.length-1] : 0; const rep = bits(2)+3; for(let i=0;i<rep;i++) lens.push(r); }
+          else if(sym === 17){ const rep = bits(3)+3; for(let i=0;i<rep;i++) lens.push(0); }
+          else { const rep = bits(7)+11; for(let i=0;i<rep;i++) lens.push(0); }
+        }
+        litT = buildTable(lens.slice(0, hlit));
+        distT = buildTable(lens.slice(hlit));
+      }
+      for(;;){
+        const sym = decode(litT);
+        if(sym < 256) out.push(sym);
+        else if(sym === 256) break;
+        else {
+          const li = sym - 257;
+          const len = LEN_BASE[li] + bits(LEN_EXT[li]);
+          const dsym = decode(distT);
+          const dist = DIST_BASE[dsym] + bits(DIST_EXT[dsym]);
+          if(dist > out.length) throw new Error('dist');
+          for(let i=0;i<len;i++) out.push(out[out.length-dist]);
+        }
+      }
+    } else throw new Error('btype');
+    if(bfinal) break;
+  }
+  return new Uint8Array(out);
+}
+function unzipBytes(buf){
+  const u8 = new Uint8Array(buf);
+  const dv = new DataView(buf);
+  let eocd = -1;
+  for(let i = u8.length-22; i >= 0; i--){
+    if(u8[i]===0x50 && u8[i+1]===0x4b && u8[i+2]===0x05 && u8[i+3]===0x06){ eocd = i; break; }
+  }
+  if(eocd < 0) throw new Error('不是有效的 xlsx 文件');
+  const cdCount = dv.getUint16(eocd+10, true);
+  const cdOff = dv.getUint32(eocd+16, true);
+  const files = {};
+  let p = cdOff;
+  for(let i=0;i<cdCount;i++){
+    const method = dv.getUint16(p+10, true);
+    const csize = dv.getUint32(p+20, true);
+    const nlen = dv.getUint16(p+28, true);
+    const elen = dv.getUint16(p+30, true);
+    const clen = dv.getUint16(p+32, true);
+    const name = new TextDecoder().decode(u8.slice(p+46, p+46+nlen));
+    const lho = dv.getUint32(p+42, true);
+    const lname = dv.getUint16(lho+26, true), lextra = dv.getUint16(lho+28, true);
+    const dataOff = lho + 30 + lname + lextra;
+    const comp = u8.slice(dataOff, dataOff+csize);
+    files[name] = method === 0 ? comp : inflateRaw(comp);
+    p += 46 + nlen + elen + clen;
+  }
+  return files;
+}
+function xlsxToRows(files){
+  const dec = new TextDecoder('utf-8');
+  const shared = [];
+  const ssXml = dec.decode(files['xl/sharedStrings.xml'] || new Uint8Array(0));
+  if(ssXml){
+    const siRe = /<si>([\s\S]*?)<\/si>/g;
+    let m;
+    while((m = siRe.exec(ssXml))){
+      let txt = '';
+      const tRe = /<t[^>]*>([\s\S]*?)<\/t>/g;
+      let tm;
+      while((tm = tRe.exec(m[1]))) txt += tm[1];
+      shared.push(txt.replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&apos;/g,"'").replace(/&#(\d+);/g,(_,n)=>String.fromCharCode(+n)));
+    }
+  }
+  const sheetXml = dec.decode(files['xl/worksheets/sheet1.xml'] || new Uint8Array(0));
+  const rows = [];
+  const rowRe = /<row[^>]*>([\s\S]*?)<\/row>/g;
+  let rm;
+  while((rm = rowRe.exec(sheetXml))){
+    const cells = [];
+    const cRe = /<c[^>]*>([\s\S]*?)<\/c>/g;
+    let cm;
+    while((cm = cRe.exec(rm[1]))){
+      const cell = cm[1];
+      const tAttr = cm[0].match(/t="([^"]*)"/);
+      const vRe = /<v>([\s\S]*?)<\/v>/.exec(cell);
+      let val = '';
+      if(tAttr && tAttr[1] === 's' && vRe) val = shared[+vRe[1]] || '';
+      else if(vRe) val = vRe[1];
+      else {
+        const it = /<is>[\s\S]*?<t[^>]*>([\s\S]*?)<\/t>[\s\S]*?<\/is>/.exec(cell);
+        if(it) val = it[1];
+      }
+      cells.push(val);
+    }
+    rows.push(cells);
+  }
+  return rows;
+}
+function excelSerialToDate(serial){
+  const ms = Math.round((serial - 25569) * 86400000);
+  return new Date(ms);
+}
+function handleXlsx(buf){
+  try{
+    const files = unzipBytes(buf);
+    const rows = xlsxToRows(files);
+    if(!rows.length) throw new Error('空表格');
+    let bills = parseWeChat(rows);
+    if(!bills) bills = parseAlipay(rows);
+    if(!bills){ toast('xlsx 中未识别到微信/支付宝账单表头'); return; }
+    showPreview(bills);
+  }catch(err){ toast('xlsx 解析失败：'+(err && err.message || err)); }
+}
+function showPreview(bills){
+  pendingBills = bills;
+  /* 去重统计 */
+  const seen = new Set(txs.filter(t=>t.source!=='manual').map(t => t.source+'|'+t.externalID));
+  let add = 0, dup = 0, uncls = 0, expSum = 0, incSum = 0;
+  for(const b of bills){
+    const key = b.source+'|'+b.externalID;
+    if(!b.externalID || seen.has(key)){ dup++; continue; }
+    add++;
+    if(b.cat === '其他') uncls++;
+    if(b.type === 'expense') expSum += b.fen; else incSum += b.fen;
+  }
+  const srcName = (bills[0] && bills[0].source === 'alipay') ? '支付宝' : (bills[0] && bills[0].source === 'wechat') ? '微信' : '文本';
+  const area = document.getElementById('previewArea');
+  area.innerHTML = '';
+  const card = el('div','card pv-card');
+  card.appendChild(el('h3','', '解析结果：'+srcName+'账单'));
+  const grid = el('div','pv-grid');
+  grid.appendChild(pvCell('有效交易', bills.length));
+  grid.appendChild(pvCell('将新增', add));
+  grid.appendChild(pvCell('重复跳过', dup));
+  grid.appendChild(pvCell('待分类', uncls));
+  grid.appendChild(pvCell('支出合计', '¥'+fmtFen(expSum)));
+  grid.appendChild(pvCell('收入合计', '¥'+fmtFen(incSum)));
+  card.appendChild(grid);
+  const btn = el('button','btn-primary', '确认导入 '+add+' 条');
+  btn.onclick = confirmImport;
+  card.appendChild(btn);
+  const list = el('div','pv-list');
+  bills.slice(0, 200).forEach(b => {
+    list.appendChild(el('div','tx-row', null));
+    const row = list.lastChild;
+    row.appendChild(el('div','tx-ic', catIcon(b.cat)));
+    const main = el('div','tx-main');
+    main.appendChild(el('div','tx-merchant', b.merchant));
+    main.appendChild(el('div','tx-note', b.note + (b.cat==='其他' ? ' · 待分类' : '')));
+    row.appendChild(main);
+    row.appendChild(el('div','tx-amt '+(b.type==='expense'?'red':'green'), (b.type==='expense'?'−':'+')+'¥'+fmtFen(b.fen)));
+  });
+  card.appendChild(list);
+  area.appendChild(card);
+  area.scrollIntoView({behavior:'smooth', block:'nearest'});
+}
+
 function parseWeChat(rows){
   const hi = rows.findIndex(r => r.some(c => c.includes('交易时间')));
   if(hi < 0) return null;
@@ -957,15 +1182,25 @@ function parseWeChat(rows){
   for(let r = hi+1; r < rows.length; r++){
     const row = rows[r];
     if(row.length <= Math.max(ci.amount, ci.status)) continue;
-    if(!row[ci.status].includes('支付成功')) continue;
+    const st = row[ci.status];
+    if(!st.includes('支付成功') && !st.includes('已存入') && !st.includes('已到账') && !st.includes('已收')) continue;
     const fen = yuanToFen(row[ci.amount]);
     if(fen === null || fen <= 0) continue;
     const t = row[ci.type];
     if(t !== '支出' && t !== '收入') continue;
-    const d = new Date(row[ci.time].replace(' ','T'));
-    if(isNaN(d.getTime())) continue;
+    let ts;
+    const rawT = row[ci.time];
+    if(/^\d+(\.\d+)?$/.test(rawT) && parseFloat(rawT) > 20000){
+      /* Excel 序列号日期 */
+      ts = excelSerialToDate(parseFloat(rawT)).getTime();
+    } else {
+      const d = new Date(rawT.replace(' ','T'));
+      if(isNaN(d.getTime())) continue;
+      ts = d.getTime();
+    }
+    if(isNaN(ts)) continue;
     bills.push({fen, type: t === '支出' ? 'expense':'income', cat: categorize(row[ci.merchant]) || '其他',
-      merchant: row[ci.merchant], note: row[ci.note] || '', date: d.getTime(), source:'wechat', externalID: row[ci.id]});
+      merchant: row[ci.merchant], note: row[ci.note] || '', date: ts, source:'wechat', externalID: row[ci.id]});
   }
   return bills.length ? bills : null;
 }
@@ -1026,6 +1261,13 @@ document.getElementById('fileInput').addEventListener('change', async function(e
   if(!f) return;
   try{
     const buf = await f.arrayBuffer();
+    const u8 = new Uint8Array(buf);
+    /* 微信 xlsx 是 zip 包（PK 开头）→ 走 xlsx 解析 */
+    if(u8.length > 4 && u8[0] === 0x50 && u8[1] === 0x4b && u8[2] === 0x03 && u8[3] === 0x04){
+      handleXlsx(buf);
+      e.target.value = '';
+      return;
+    }
     let text = new TextDecoder('utf-8').decode(buf);
     if(text.includes('\uFFFD')){ /* UTF-8 解码出乱码 → 支付宝 CSV 是 GBK/GB18030 编码 */
       try{
