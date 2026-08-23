@@ -61,17 +61,10 @@ main{padding:12px 16px calc(100px + env(safe-area-inset-bottom));}
 .budget-bar .bfill{height:100%;border-radius:6px;background:var(--primary);transition:width .3s;}
 .budget-info{font-size:13px;color:var(--dim);}
 .amt-hint{font-size:12px;color:var(--sub);text-align:center;margin-top:4px;}
-.amt-ops{display:flex;gap:8px;justify-content:center;margin-top:10px;}
-.amt-ops button{width:64px;height:40px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--text);font-size:20px;font-weight:600;cursor:pointer;}
-.amt-ops{display:flex;gap:8px;justify-content:center;margin-top:10px;}
-.amt-ops button{width:52px;height:38px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--text);font-size:19px;font-weight:600;cursor:pointer;}
-.amt-ops{display:flex;gap:8px;justify-content:center;margin-top:10px;}
-.amt-ops button{width:56px;height:36px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--primary);font-size:20px;font-weight:700;line-height:1;cursor:pointer;}
-.amt-ops{display:flex;gap:8px;margin-top:10px;}
-.amt-ops button{flex:1;padding:10px 0;border:1px solid var(--line);border-radius:12px;background:var(--card);color:var(--text);font-size:20px;font-weight:600;cursor:pointer;}
-.amt-ops button:active{background:var(--primary-bg);}
-.amt-ops{display:flex;gap:8px;margin-top:10px;}
-.amt-ops button{flex:1;padding:9px 0;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--text);font-size:18px;font-weight:600;cursor:pointer;}
+.amt-inline{display:flex;gap:6px;margin-left:8px;}
+.amt-inline button{width:34px;height:34px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--primary);font-size:17px;font-weight:700;line-height:1;cursor:pointer;}
+.amt-inline button:active{background:var(--primary-bg);}
+.field .field-sub{margin-top:8px;}
 .amt-ops button:active{background:var(--primary-bg);}
 .cat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
 .cat-item{display:flex;flex-direction:column;align-items:center;gap:4px;padding:12px 0 10px;background:var(--card);border-radius:14px;border:2px solid transparent;cursor:pointer;}
@@ -148,6 +141,15 @@ details[open] summary::before{content:"▾ ";}
 .bar{width:70%;max-width:26px;background:var(--primary);border-radius:5px 5px 2px 2px;min-height:2px;}
 .bar-col .bl{font-size:10px;color:var(--sub);}
 .bar-col .bv{font-size:10px;color:var(--sub);}
+.line-chart{position:relative;width:100%;height:150px;padding-top:8px;}
+.line-chart svg{width:100%;height:100%;overflow:visible;}
+.line-chart .ln{fill:none;stroke:var(--primary);stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round;}
+.line-chart .ln-area{fill:var(--primary-bg);stroke:none;}
+.line-chart .dot{fill:var(--primary);stroke:#fff;stroke-width:1.5;}
+.line-chart .dot-zero{fill:var(--line);stroke:#fff;stroke-width:1;}
+.line-chart .lbl{font-size:10px;fill:var(--sub);text-anchor:middle;}
+.line-chart .amt{font-size:10px;fill:var(--text);text-anchor:middle;font-weight:600;}
+.line-chart .gl{stroke:var(--line);stroke-width:1;stroke-dasharray:3 3;}
 .sb-row{display:flex;align-items:center;gap:10px;padding:7px 0;font-size:13px;}
 .sb-label{width:76px;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .sb-track{flex:1;height:8px;background:var(--line);border-radius:4px;overflow:hidden;}
@@ -191,6 +193,7 @@ details[open] summary::before{content:"▾ ";}
     </div>
     <div class="h-nav" id="hNav" style="display:none">
       <button id="prevM" onclick="setMonth(-1)">‹</button>
+      <select id="listYearSel" onchange="goListYear(this.value)"></select>
       <select id="monthSelect" onchange="goMonth(this.value)"></select>
       <button id="nextM" onclick="setMonth(1)">›</button>
     </div>
@@ -203,11 +206,11 @@ details[open] summary::before{content:"▾ ";}
     <div class="amount-wrap">
       <span class="sym" id="amtSym">−</span>
       <input id="amountInput" type="text" inputmode="decimal" placeholder="0.00" autocomplete="off">
-    </div>
-    <div class="amt-ops" id="amtOps">
-      <button type="button" onclick="amtOp('+')">+</button>
-      <button type="button" onclick="amtOp('-')">−</button>
-      <button type="button" onclick="amtOp('c')">C</button>
+      <span class="amt-inline">
+        <button type="button" onclick="amtOp('+')">+</button>
+        <button type="button" onclick="amtOp('-')">−</button>
+        <button type="button" onclick="amtOp('c')">C</button>
+      </span>
     </div>
     <div class="amt-hint">支持算式：12+3.5、100-20、25+8+2.5</div>
     <div class="seg" style="margin:14px 0 16px;">
@@ -216,13 +219,10 @@ details[open] summary::before{content:"▾ ";}
     </div>
     <div class="cat-grid" id="catGrid"></div>
     <div class="field">
-      <label>商户 / 交易对方</label>
-      <input id="merchantInput" type="text" placeholder="如：瑞幸咖啡" autocomplete="off">
+      <label>商户 / 备注</label>
+      <input id="merchantInput" type="text" placeholder="交易对方（如：瑞幸咖啡）" autocomplete="off">
+      <input id="noteInput" class="field-sub" type="text" placeholder="备注（可选）" autocomplete="off">
       <div class="auto-tip" id="autoTip"></div>
-    </div>
-    <div class="field">
-      <label>备注（可选）</label>
-      <input id="noteInput" type="text" placeholder="如：请同事喝咖啡" autocomplete="off">
     </div>
     <div class="field">
       <label>日期</label>
@@ -440,7 +440,7 @@ function switchTab(t){
   const nav = document.getElementById('hNav');
   if(t === 'list'){ nav.style.display='flex'; } else { nav.style.display='none'; }
   if(t === 'stats'){ fillStatSelects(); renderStats(); }
-  if(t === 'list') renderList();
+  if(t === 'list'){ fillMonthSelect(); renderList(); }
   if(t === 'import') renderRules();
 }
 
@@ -491,6 +491,7 @@ function saveManual(){
   document.getElementById('noteInput').value = '';
   document.getElementById('autoTip').textContent = '';
   toast('已记账 ✓');
+  fillMonthSelect();
   renderList();
 }
 document.getElementById('merchantInput').addEventListener('input', function(){
@@ -502,18 +503,32 @@ document.getElementById('merchantInput').addEventListener('input', function(){
 let viewY = new Date().getFullYear(), viewM = new Date().getMonth();
 let filter = 'all', searchQ = '';
 const WEEK = ['周日','周一','周二','周三','周四','周五','周六'];
+function txYears(){
+  const s = new Set(txs.map(t => new Date(t.date).getFullYear()));
+  s.add(new Date().getFullYear()); // 永远包含今年
+  return [...s].sort((a,b)=>a-b);
+}
 function fillMonthSelect(){
+  const ys = document.getElementById('listYearSel');
   const sel = document.getElementById('monthSelect');
-  const nowY = new Date().getFullYear();
-  let html = '';
-  for(let y = nowY - 2; y <= nowY + 1; y++){
-    for(let m = 0; m < 12; m++){
-      const v = y+'-'+m;
-      const selAttr = (y===viewY && m===viewM) ? ' selected' : '';
-      html += '<option value="'+v+'"'+selAttr+'>'+y+'年'+(m+1)+'月</option>';
-    }
+  const years = txYears();
+  if(!years.includes(viewY)) viewY = years[years.length-1];
+  let yh = '';
+  for(const y of years){ yh += '<option value="'+y+'"'+(y===viewY?' selected':'')+'>'+y+'年</option>'; }
+  ys.innerHTML = yh;
+  let mh = '';
+  for(let m = 0; m < 12; m++){
+    const v = viewY+'-'+m;
+    const selAttr = (m===viewM) ? ' selected' : '';
+    mh += '<option value="'+v+'"'+selAttr+'>'+(m+1)+'月</option>';
   }
-  sel.innerHTML = html;
+  sel.innerHTML = mh;
+}
+function goListYear(y){
+  viewY = parseInt(y);
+  viewM = 0;
+  fillMonthSelect();
+  renderList();
 }
 function goMonth(v){
   const [y, m] = v.split('-').map(Number);
@@ -524,6 +539,7 @@ function setMonth(delta){
   viewM += delta;
   if(viewM < 0){ viewM = 11; viewY--; }
   if(viewM > 11){ viewM = 0; viewY++; }
+  fillMonthSelect();
   renderList();
 }
 function setFilter(f){
@@ -536,7 +552,11 @@ document.getElementById('searchInput').addEventListener('input', function(){
   renderList();
 });
 function renderList(){
+  const years = txYears();
+  if(!years.includes(viewY)) viewY = years[years.length-1];
+  document.getElementById('listYearSel').value = viewY;
   document.getElementById('monthSelect').value = viewY+'-'+viewM;
+  document.getElementById('listYearSel').value = String(viewY);
   const monthTxs = txs.filter(t => { const d = new Date(t.date); return d.getFullYear()===viewY && d.getMonth()===viewM; });
   const exp = monthTxs.filter(t=>t.type==='expense').reduce((a,t)=>a+t.fen,0);
   const inc = monthTxs.filter(t=>t.type==='income').reduce((a,t)=>a+t.fen,0);
@@ -629,13 +649,13 @@ function saveEdit(){
     t.date = new Date(d.getFullYear(), d.getMonth(), d.getDate(), o.getHours(), o.getMinutes()).getTime();
   }
   if(merchant && editCat !== '其他' && editCat !== oldCat) learn(merchant, editCat);
-  saveTxs(); closeEdit(); renderList(); toast('已保存');
+  saveTxs(); closeEdit(); fillMonthSelect(); renderList(); toast('已保存');
 }
 function delTx(){
   if(!editId) return;
   if(!confirm('确定删除这笔账单吗？')) return;
   txs = txs.filter(x => x.id !== editId);
-  saveTxs(); closeEdit(); renderList(); toast('已删除');
+  saveTxs(); closeEdit(); fillMonthSelect(); renderList(); toast('已删除');
 }
 
 /* ============ CSV 解析（引号转义状态机） ============ */
@@ -874,6 +894,7 @@ function confirmImport(){
   saveTxs();
   document.getElementById('previewArea').innerHTML = '';
   pendingBills = [];
+  fillMonthSelect();
   toast('✅ 已导入 '+add+' 条，跳过重复 '+dup+' 条');
 }
 
@@ -910,6 +931,9 @@ let trend = '7d'; // 7d | month | year
 function setTrend(r){
   trend = r;
   ['trend7','trendM','trendY'].forEach(id => document.getElementById(id).classList.toggle('active', id==='trend7' ? r==='7d' : id==='trendM' ? r==='month' : r==='year'));
+  const chart = document.getElementById('barChart');
+  chart.classList.toggle('line-chart', r==='month');
+  chart.classList.toggle('bar-chart', r!=='month');
   renderStats();
 }
 function setStatMode(md){
@@ -922,9 +946,10 @@ function setStatMode(md){
 function fillStatSelects(){
   const ys = document.getElementById('statYearSel');
   const ms = document.getElementById('statMonthSel');
-  const nowY = new Date().getFullYear();
+  const years = txYears();
+  if(!years.includes(statY)) statY = years[years.length-1];
   let yh = '';
-  for(let y = nowY - 2; y <= nowY + 1; y++){
+  for(const y of years){
     yh += '<option value="'+y+'"'+(y===statY?' selected':'')+'>'+y+'年</option>';
   }
   ys.innerHTML = yh;
@@ -984,6 +1009,45 @@ function editBudget(){
   document.getElementById('budgetBar').innerHTML = '';
   document.getElementById('budgetInfo').textContent = '修改预算后点保存';
 }
+function renderLineChart(container, bars, max){
+  container.classList.add('line-chart');
+  container.classList.remove('bar-chart');
+  const W = container.clientWidth || 340, H = 150, PAD = 6, TOP = 22, BOT = 22;
+  const n = bars.length;
+  const innerH = H - TOP - BOT;
+  const x = i => n === 1 ? W/2 : PAD + i*(W-2*PAD)/(n-1);
+  const y = v => TOP + innerH - (v/max)*innerH;
+  const pts = bars.map((d,i) => [x(i), y(d.fen)]);
+  let line = '';
+  pts.forEach((p,i) => { line += (i===0?'M':'L')+p[0].toFixed(1)+','+p[1].toFixed(1)+' '; });
+  /* 面积 */
+  const area = pts.length > 1
+    ? 'M'+pts[0][0].toFixed(1)+','+(TOP+innerH).toFixed(1)+' '+line+'L'+pts[pts.length-1][0].toFixed(1)+','+(TOP+innerH).toFixed(1)+' Z'
+    : '';
+  const spendDays = bars.filter(d=>d.fen>0).length;
+  let svg = '<svg viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none">';
+  /* 网格线 */
+  [0, 0.5, 1].forEach(f => {
+    const gy = TOP + innerH*(1-f);
+    svg += '<line class="gl" x1="0" y1="'+gy.toFixed(1)+'" x2="'+W+'" y2="'+gy.toFixed(1)+'"/>';
+  });
+  if(area) svg += '<path class="ln-area" d="'+area+'"/>';
+  if(line) svg += '<path class="ln" d="'+line+'"/>';
+  /* 数据点 + 日期 + 金额 */
+  pts.forEach((p,i) => {
+    const d = bars[i];
+    const dot = d.fen > 0 ? 'dot' : 'dot-zero';
+    svg += '<circle class="'+dot+'" cx="'+p[0].toFixed(1)+'" cy="'+p[1].toFixed(1)+'" r="3"/>';
+    /* 日期标签隔 5 天显示，避免重叠 */
+    if(i%5===0 || i===n-1) svg += '<text class="lbl" x="'+p[0].toFixed(1)+'" y="'+(H-6)+'">'+d.label+'</text>';
+    /* 金额：有支出才显示；支出天数多时隔天显示 */
+    if(d.fen > 0 && (spendDays <= 10 || i%2===0)){
+      svg += '<text class="amt" x="'+p[0].toFixed(1)+'" y="'+(p[1]-7).toFixed(1)+'">¥'+fmtFen(d.fen)+'</text>';
+    }
+  });
+  svg += '</svg>';
+  container.innerHTML = svg;
+}
 function renderStats(){
   const now = new Date();
   const y = statY, m = statM;
@@ -1026,14 +1090,19 @@ function renderStats(){
     }
   }
   const max = Math.max(...bars.map(d=>d.fen), 1);
-  bars.forEach(d => {
-    const col = el('div','bar-col');
-    const bv = el('div','bv', d.fen ? '¥'+fmtFen(d.fen) : '');
-    const bar = el('div','bar');
-    bar.style.height = Math.max(2, Math.round(d.fen/max*100)) + '%';
-    col.append(bar, bv, el('div','bl', d.label));
-    chart.appendChild(col);
-  });
+  if(trend === 'month'){
+    /* 月趋势：折线图 */
+    renderLineChart(chart, bars, max);
+  } else {
+    bars.forEach(d => {
+      const col = el('div','bar-col');
+      const bv = el('div','bv', d.fen ? '¥'+fmtFen(d.fen) : '');
+      const bar = el('div','bar');
+      bar.style.height = Math.max(2, Math.round(d.fen/max*100)) + '%';
+      col.append(bar, bv, el('div','bl', d.label));
+      chart.appendChild(col);
+    });
+  }
   /* 分类占比 */
   const brk = document.getElementById('catBreak');
   brk.innerHTML = '';
@@ -1172,7 +1241,7 @@ function clearAll(){
   if(!confirm('确定清空所有账单数据？此操作不可恢复！')) return;
   if(!confirm('再确认一次：真的要清空全部数据吗？')) return;
   txs = [];
-  saveTxs(); renderList(); toast('已清空');
+  saveTxs(); fillMonthSelect(); renderList(); toast('已清空');
 }
 
 /* ============ Toast ============ */
