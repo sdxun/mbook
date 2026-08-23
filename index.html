@@ -264,6 +264,7 @@ details[open] summary::before{content:"▾ ";}
       </span>
     </div>
     <div class="amt-hint">支持算式：12+3.5、100-20、25+8+2.5</div>
+    <div id="autoResult" style="display:none;margin:8px 0;padding:10px 12px;background:#e8f5e9;border-radius:10px;font-size:14px;color:#2e7d32"></div>
     <div class="seg" style="margin:14px 0 16px;">
       <button id="segExp" class="active" onclick="setType('expense')">支出</button>
       <button id="segInc" onclick="setType('income')">收入</button>
@@ -281,7 +282,7 @@ details[open] summary::before{content:"▾ ";}
       </div>
     </div>
     <div class="field">
-      <label>商户 / 备注</label>
+      <label>商户 / 备注 <button type="button" class="btn-ghost small" id="quickBtn" onclick="quickFill()" style="float:right">📋 快速记账</button></label>
       <input id="merchantInput" type="text" placeholder="交易对方（如：瑞幸咖啡）" autocomplete="off">
       <input id="noteInput" class="field-sub" type="text" placeholder="备注（可选）" autocomplete="off">
       <div class="auto-tip" id="autoTip"></div>
@@ -650,6 +651,98 @@ function amtOp(op){
   else inp.value = v + op;
   inp.focus();
 }
+/* ============ 快捷指令 ============ */
+function quickFill(){
+  if(navigator.clipboard && navigator.clipboard.readText){
+    navigator.clipboard.readText().then(function(text){
+      if(!text){ toast('剪贴板是空的'); return; }
+      parseQuick(text);
+    }).catch(function(){
+      toast('无法读取剪贴板，请重试');
+      fillFromUrl(); /* 兜底：尝试 URL 参数 */
+    });
+  } else {
+    fillFromUrl();
+  }
+}
+function parseQuick(text){
+  text = String(text).trim();
+  /* 格式：金额 商户 [分类]，如 "23.5 瑞幸咖啡 餐饮" 或 "23.5|瑞幸咖啡|餐饮" */
+  let parts = text.split(/[|,，]/).map(x=>x.trim());
+  if(parts.length < 2) parts = text.split(/\s+/).map(x=>x.trim());
+  const amt = yuanToFen(parts[0]);
+  if(amt === null || amt <= 0){ toast('金额格式不对：'+parts[0]); return; }
+  const merchant = parts[1] || '';
+  let cat = parts[2] || '';
+  /* 分类名匹配（支持 中文名/别名/emoji） */
+  if(cat){
+    const c = CATS.find(x => x.id === cat || x.icon === cat);
+    cat = c ? c.id : '';
+    if(!cat){ /* 尝试前缀匹配 */ const c2 = CATS.find(x => x.id.startsWith(cat)); cat = c2 ? c2.id : ''; }
+  }
+  /* 填充表单 */
+  document.getElementById('amountInput').value = parts[0];
+  document.getElementById('merchantInput').value = merchant;
+  if(cat){ curCat = cat; buildCatGrid(); }
+  toast('已填入，点下方保存 ✓');
+}
+function fillFromUrl(){
+  const qs = location.search;
+  if(!qs) return;
+  try{
+    const p = new URLSearchParams(qs);
+    const amt = p.get('amt');
+    if(amt){
+      const merchant = p.get('merchant') || '';
+      let cat = p.get('cat') || '';
+      document.getElementById('amountInput').value = amt;
+      document.getElementById('merchantInput').value = merchant;
+      if(cat){ const c = CATS.find(x => x.id === cat); if(c){ curCat = c.id; buildCatGrid(); } }
+      toast('已从链接填入，确认后保存 ✓');
+    }
+  }catch(e){}
+}
+/* URL 自动记账：?act=add&amt=..&merchant=..&cat=..&type=expense|income */
+function applyUrlAdd(){
+  const qs = location.search;
+  if(!qs) return false;
+  let p;
+  try{ p = new URLSearchParams(qs); }catch(e){ return false; }
+  if(p.get('act') !== 'add') return false;
+  const fen = yuanToFen(p.get('amt') || '');
+  if(fen === null || fen <= 0){ toast('链接缺少有效金额'); return false; }
+  const merchant = (p.get('merchant') || '').trim();
+  const cat = p.get('cat') || '';
+  const type = p.get('type') === 'income' ? 'income' : 'expense';
+  let catId = cat;
+  if(cat){ const c = CATS.find(x => x.id === cat || x.icon === cat); catId = c ? c.id : ''; }
+  if(!catId) catId = categorize(merchant) || '其他';
+  const ts = Date.now();
+  txs.push({id:uid(), fen, type, cat:catId, merchant, note:'', date:ts, source:'shortcut', externalID:'', createdAt:Date.now()});
+  saveTxs();
+  fillMonthSelect();
+  renderList();
+  /* 清掉 URL 参数，避免刷新重复记账 */
+  try{ history.replaceState({}, '', location.pathname); }catch(e){}
+  showAutoResult(fen, merchant, catId, type);
+  return true;
+}
+function showAutoResult(fen, merchant, catId, type){
+  const r = document.getElementById('autoResult');
+  if(!r) return;
+  const t = type === 'expense' ? '支出' : '收入';
+  r.innerHTML = '✅ 已自动记录：<b>' + t + ' ¥' + fmtFen(fen) + '</b>' +
+    (merchant ? ' · ' + merchant : '') + ' · ' + catId +
+    ' <button type="button" class="btn-ghost small" onclick="undoLast()">撤销</button>';
+  r.style.display = 'block';
+}
+function undoLast(){
+  const last = txs[txs.length-1];
+  if(last && last.source === 'shortcut'){ txs.pop(); saveTxs(); fillMonthSelect(); renderList(); }
+  const r = document.getElementById('autoResult'); if(r) r.style.display = 'none';
+  toast('已撤销');
+}
+
 function saveManual(){
   const fen = yuanToFen(document.getElementById('amountInput').value);
   if(!fen || fen <= 0){ toast('请输入正确的金额'); return; }
@@ -1856,6 +1949,7 @@ buildCatGrid();
 fillCatFilter();
 renderList();
 renderRules();
+applyUrlAdd();
 /* PWA：注册 service worker，支持离线 */
 if('serviceWorker' in navigator){
   navigator.serviceWorker.register('./sw.js').catch(function(){ /* 不支持时静默 */ });
