@@ -31,8 +31,8 @@ header{position:sticky;top:0;z-index:40;background:var(--bg);padding-top:env(saf
 .h-title{font-size:20px;font-weight:700;}
 .h-nav{display:flex;align-items:center;gap:8px;}
 .h-nav button{border:none;background:var(--card);width:34px;height:36px;border-radius:12px;font-size:18px;color:var(--primary);font-weight:700;box-shadow:0 1px 3px rgba(0,0,0,.06);}
-.h-nav .h-date-pill{display:flex;align-items:center;gap:2px;background:var(--card);border-radius:12px;padding:2px 10px;box-shadow:0 1px 3px rgba(0,0,0,.06);height:36px;}
-.h-nav .h-date-pill select{border:none;background:transparent;color:var(--text);font-size:15px;font-weight:700;padding:0 4px;text-align:center;-webkit-appearance:none;appearance:none;max-width:76px;}
+.h-date-pill{display:flex;align-items:center;gap:2px;background:var(--card);border-radius:12px;padding:2px 10px;box-shadow:0 1px 3px rgba(0,0,0,.06);height:36px;}
+.h-date-pill select{border:none;background:transparent;color:var(--text);font-size:15px;font-weight:700;padding:0 4px;text-align:center;-webkit-appearance:none;appearance:none;max-width:76px;}
 .h-nav .h-date-pill .h-pill-sep{color:var(--sub);font-size:13px;font-weight:400;}
 .h-nav .h-today{width:auto;padding:0 13px;font-size:13px;font-weight:600;background:var(--primary);color:#fff;}
 #monthLabel{font-size:15px;font-weight:600;min-width:100px;text-align:center;}
@@ -57,8 +57,8 @@ main{padding:12px 16px calc(100px + env(safe-area-inset-bottom));}
 .stat-range .seg{flex:0 0 auto;margin:0;}
 .stat-range .seg-btn{flex:1;padding:8px 14px;border-radius:10px;border:none;background:transparent;font-size:14px;color:var(--sub);font-weight:600;cursor:pointer;}
 .stat-range .seg-btn.active{background:var(--primary);color:#fff;}
-.stat-range select{flex:1;min-width:0;padding:8px;border-radius:10px;border:1px solid var(--line);background:var(--card);font-size:14px;color:var(--text);}
-.stat-range .stat-today{flex:0 0 auto;padding:8px 14px;border:none;border-radius:10px;background:var(--primary);color:#fff;font-size:13px;font-weight:600;}
+.stat-range select{border:none;background:transparent;color:var(--text);font-size:15px;font-weight:700;padding:0 4px;text-align:center;-webkit-appearance:none;appearance:none;max-width:76px;}
+.stat-range .stat-today{flex:0 0 auto;padding:8px 14px;border:none;border-radius:12px;background:var(--primary);color:#fff;font-size:13px;font-weight:600;}
 .seg select{flex:1;padding:8px;border-radius:10px;border:none;background:var(--bg);font-size:14px;color:var(--text);margin:2px;}
 .seg button{flex:1;padding:10px;border-radius:10px;border:none;background:transparent;font-size:15px;color:var(--sub);font-weight:500;}
 .seg button.active{background:var(--primary);color:#fff;font-weight:600;}
@@ -106,12 +106,20 @@ main{padding:12px 16px calc(100px + env(safe-area-inset-bottom));}
 .search-row select{flex:1;min-width:0;padding:9px 10px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--text);font-size:14px;-webkit-appearance:none;appearance:none;}
 .amt-filter{width:64px;padding:9px 8px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--text);font-size:14px;text-align:center;}
 .amt-tilde{color:var(--sub);font-size:13px;}
-.cat-mgr-row{margin:10px 0 4px;display:flex;justify-content:flex-end;}
-.cat-mgr{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px;margin:4px 0 10px;}
+.cat-mgr{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px;margin:10px 0 12px;}
+.cat-item.cat-mgr-item-grid{border:2px dashed var(--line);color:var(--sub);}
+.cat-item.cat-mgr-item-grid .cn{color:var(--sub);}
 .cat-mgr-list{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;}
 .cat-mgr-item{display:flex;align-items:center;gap:6px;padding:6px 10px;border:1px solid var(--line);border-radius:20px;font-size:14px;background:var(--bg);}
 .cat-mgr-item .del{color:#e74c3c;font-size:12px;padding:0 2px;border:none;background:none;cursor:pointer;}
 .cat-mgr-add{display:flex;gap:6px;}
+.cat-emoji-box{margin-top:10px;}
+.cat-emoji-title{font-size:12px;color:var(--sub);margin-bottom:6px;}
+.cat-emoji-grid{display:grid;grid-template-columns:repeat(8,1fr);gap:6px;}
+.cat-emoji{display:flex;align-items:center;justify-content:center;height:36px;font-size:20px;background:var(--bg);border:1px solid var(--line);border-radius:8px;cursor:pointer;}
+.cat-emoji.active{border-color:var(--primary);background:var(--primary-bg);}
+.cat-mgr-item .ic{border:none;background:none;font-size:18px;cursor:pointer;padding:0 2px;}
+.cat-mgr-item .nm{flex:1;}
 .cat-mgr-add input{flex:1;padding:8px 10px;border:1px solid var(--line);border-radius:10px;font-size:14px;background:var(--bg);color:var(--text);min-width:0;}
 .day-group{margin-bottom:8px;}
 .day-head{display:flex;justify-content:space-between;align-items:baseline;font-size:13px;color:var(--sub);padding:10px 4px 4px;}
@@ -194,6 +202,9 @@ details[open] summary::before{content:"▾ ";}
 .sheet.show{transform:translateY(0);}
 .sheet-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;}
 .sheet-head .st{font-size:17px;font-weight:700;}
+.sheet select{width:100%;padding:12px;border:1px solid var(--line);border-radius:12px;background:var(--card);font-size:16px;color:var(--text);}
+.clear-count{font-size:14px;color:var(--danger,#e74c3c);margin-top:12px;font-weight:600;}
+.btn-primary.danger{background:#e74c3c;}
 .sheet-head button{border:none;background:none;color:var(--primary);font-size:15px;font-weight:600;cursor:pointer;}
 .cat-chips{display:flex;gap:8px;overflow-x:auto;padding:4px 0 8px;-webkit-overflow-scrolling:touch;}
 .cc{padding:8px 14px;border-radius:20px;border:1px solid var(--line);background:var(--card);font-size:13px;white-space:nowrap;cursor:pointer;flex-shrink:0;}
@@ -253,13 +264,15 @@ details[open] summary::before{content:"▾ ";}
       <button id="segInc" onclick="setType('income')">收入</button>
     </div>
     <div class="cat-grid" id="catGrid"></div>
-    <div class="cat-mgr-row"><button class="btn-ghost small" onclick="toggleCatMgr()">⚙️ 管理分类</button></div>
     <div id="catMgr" class="cat-mgr" style="display:none">
       <div class="cat-mgr-list" id="catMgrList"></div>
       <div class="cat-mgr-add">
         <input id="catNewName" type="text" placeholder="新分类名称" maxlength="6">
-        <input id="catNewIcon" type="text" placeholder="图标(emoji)" maxlength="4" style="width:64px">
         <button class="btn-ghost small" onclick="addCat()">添加</button>
+      </div>
+      <div class="cat-emoji-box">
+        <div class="cat-emoji-title">选择图标</div>
+        <div class="cat-emoji-grid" id="catEmojiGrid"></div>
       </div>
     </div>
     <div class="field">
@@ -309,8 +322,11 @@ details[open] summary::before{content:"▾ ";}
           <button class="seg-btn active" id="segModeMonth" onclick="setStatMode('month')">月</button>
           <button class="seg-btn" id="segModeYear" onclick="setStatMode('year')">年</button>
         </div>
-        <select id="statYearSel"></select>
-        <select id="statMonthSel" style="display:none"></select>
+        <div class="h-date-pill" style="flex:1;justify-content:center;">
+          <select id="statYearSel"></select>
+          <span class="h-pill-sep">/</span>
+          <select id="statMonthSel" style="display:none"></select>
+        </div>
         <button class="stat-today" onclick="statToday()">本月</button>
       </div>
     </div>
@@ -370,6 +386,7 @@ details[open] summary::before{content:"▾ ";}
       <button class="btn-ghost" onclick="document.getElementById('backupInput').click()">📥 导入备份</button>
       <input type="file" id="backupInput" accept=".json,application/json" style="display:none">
       <button class="btn-ghost danger" onclick="clearAll()">🗑 清空所有数据</button>
+      <button class="btn-ghost" onclick="openClearRange()">🗓 按时间清理</button>
     </div>
   </section>
 </main>
@@ -392,6 +409,22 @@ details[open] summary::before{content:"▾ ";}
   <div id="editSrc"></div>
   <button class="btn-primary" style="margin-top:14px;" onclick="saveEdit()">保存修改</button>
   <button class="btn-ghost danger" onclick="delTx()">删除这笔</button>
+</div>
+
+<div class="sheet-mask" id="clearMask" onclick="closeClearRange()"></div>
+<div class="sheet" id="clearSheet">
+  <div class="sheet-head"><span class="st">🗓 按时间清理</span><button onclick="closeClearRange()">完成</button></div>
+  <div class="field"><label>年份</label><select id="clearYearSel"></select></div>
+  <div class="field"><label>月份（选「全年」则清空该年）</label><select id="clearMonthSel">
+    <option value="">全年</option>
+    <option value="0">1月</option><option value="1">2月</option><option value="2">3月</option>
+    <option value="3">4月</option><option value="4">5月</option><option value="5">6月</option>
+    <option value="6">7月</option><option value="7">8月</option><option value="8">9月</option>
+    <option value="9">10月</option><option value="10">11月</option><option value="11">12月</option>
+  </select></div>
+  <div class="field"><label>日期（选「整天」则清空整月）</label><input id="clearDateSel" type="date" value=""></div>
+  <div id="clearCount" class="clear-count"></div>
+  <button class="btn-primary danger" style="margin-top:14px;" onclick="doClearRange()">确认清理</button>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -515,35 +548,62 @@ function buildCatGrid(){
     d.onclick = () => { curCat = c.id; g.querySelectorAll('.cat-item').forEach(x=>x.classList.remove('active')); d.classList.add('active'); };
     g.appendChild(d);
   });
+  const mgr = document.createElement('div');
+  mgr.className = 'cat-item cat-mgr-item-grid';
+  mgr.innerHTML = '<span class="ci">➕</span><span class="cn">分类管理</span>';
+  mgr.onclick = () => toggleCatMgr();
+  g.appendChild(mgr);
 }
 
 /* ============ 分类管理 ============ */
+var CAT_ICONS = ['🍜','🚗','🛍️','🎮','💊','🏠','📱','👕','🎁','✈️','🎬','📚','🐶','🐱','💄','⚽','☕','🍺','🧾','💼','👶','💍','🔧','🌿'];
+var curCatIcon = '🏷️';
+function renderCatEmoji(){
+  const g = document.getElementById('catEmojiGrid');
+  if(!g) return;
+  g.innerHTML = '';
+  CAT_ICONS.forEach(ic => {
+    const d = document.createElement('div');
+    d.className = 'cat-emoji' + (ic===curCatIcon ? ' active' : '');
+    d.textContent = ic;
+    d.onclick = () => { curCatIcon = ic; renderCatEmoji(); };
+    g.appendChild(d);
+  });
+}
 function toggleCatMgr(){
   const m = document.getElementById('catMgr');
   const show = m.style.display === 'none';
   m.style.display = show ? '' : 'none';
-  if(show) renderCatMgr();
+  if(show){ renderCatMgr(); renderCatEmoji(); }
 }
 function renderCatMgr(){
   const box = document.getElementById('catMgrList');
   box.innerHTML = '';
   CATS.forEach(c => {
-    const it = el('div','cat-mgr-item', c.icon+' '+c.id);
+    const it = el('div','cat-mgr-item', '');
+    const ic = el('button','ic','');
+    ic.textContent = c.icon;
+    ic.title = '点击更换图标';
+    ic.onclick = () => {
+      const next = CAT_ICONS[(CAT_ICONS.indexOf(c.icon)+1) % CAT_ICONS.length];
+      c.icon = next; saveCats(); renderCatMgr(); buildCatGrid();
+    };
+    const nm = el('span','nm', c.id);
     const del = el('button','del','✕');
     del.onclick = () => delCat(c.id);
-    it.appendChild(del);
+    it.appendChild(ic); it.appendChild(nm); it.appendChild(del);
     box.appendChild(it);
   });
 }
 function addCat(){
   const n = document.getElementById('catNewName').value.trim();
-  const ic = document.getElementById('catNewIcon').value.trim() || '🏷️';
+  const ic = curCatIcon;
   if(!n){ toast('请输入分类名称'); return; }
   if(CATS.some(c => c.id === n)){ toast('分类已存在'); return; }
   CATS.push({id:n, icon:ic});
   saveCats();
   document.getElementById('catNewName').value = '';
-  document.getElementById('catNewIcon').value = '';
+  curCatIcon = '🏷️'; renderCatEmoji();
   renderCatMgr(); buildCatGrid(); fillCatFilter();
   toast('已添加分类：'+n);
 }
@@ -1388,6 +1448,58 @@ function clearAll(){
   if(!confirm('再确认一次：真的要清空全部数据吗？')) return;
   txs = [];
   saveTxs(); fillMonthSelect(); renderList(); toast('已清空');
+}
+
+/* ============ 按时间清理 ============ */
+function openClearRange(){
+  const ys = document.getElementById('clearYearSel');
+  ys.innerHTML = '';
+  const yrs = txYears();
+  const cur = new Date().getFullYear();
+  if(!yrs.includes(cur)) yrs.push(cur);
+  yrs.sort((a,b)=>b-a);
+  yrs.forEach(y => {
+    const o = document.createElement('option');
+    o.value = y; o.textContent = y + '年';
+    if(y === cur) o.selected = true;
+    ys.appendChild(o);
+  });
+  document.getElementById('clearMonthSel').value = '';
+  document.getElementById('clearDateSel').value = '';
+  document.getElementById('clearMonthSel').onchange = updateClearCount;
+  document.getElementById('clearDateSel').onchange = updateClearCount;
+  updateClearCount();
+  document.getElementById('clearMask').classList.add('show');
+  document.getElementById('clearSheet').classList.add('show');
+}
+function closeClearRange(){
+  document.getElementById('clearMask').classList.remove('show');
+  document.getElementById('clearSheet').classList.remove('show');
+}
+function clearSelRange(){
+  const y = parseInt(document.getElementById('clearYearSel').value, 10);
+  const m = document.getElementById('clearMonthSel').value; // '' 全年 | '0'..'11'
+  const d = document.getElementById('clearDateSel').value;   // '' 整天 | 'YYYY-MM-DD'
+  return txs.filter(t => {
+    const dt = new Date(t.date);
+    if(dt.getFullYear() !== y) return false;
+    if(m !== '' && dt.getMonth() !== parseInt(m, 10)) return false;
+    if(d !== '' && fmtDate(new Date(t.date)) !== d) return false;
+    return true;
+  });
+}
+function updateClearCount(){
+  const n = clearSelRange().length;
+  document.getElementById('clearCount').textContent = n ? '将删除 ' + n + ' 笔账单' : '该范围没有账单';
+}
+function doClearRange(){
+  const list = clearSelRange();
+  if(!list.length){ toast('该范围没有账单'); return; }
+  if(!confirm('确定删除 ' + list.length + ' 笔账单？此操作不可恢复！')) return;
+  const ids = new Set(list.map(t => t.id));
+  txs = txs.filter(t => !ids.has(t.id));
+  saveTxs(); fillMonthSelect(); renderList(); closeClearRange();
+  toast('已删除 ' + list.length + ' 笔');
 }
 
 /* ============ Toast ============ */
