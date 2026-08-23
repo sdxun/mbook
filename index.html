@@ -98,6 +98,7 @@ main{padding:12px 16px calc(100px + env(safe-area-inset-bottom));}
 .month-sum .val{font-size:20px;font-weight:700;}
 .red{color:var(--red);}.green{color:var(--green);}
 .chips{display:flex;gap:8px;margin-bottom:10px;}
+.chip-quick{margin-left:auto;background:var(--primary-bg);color:var(--primary);font-weight:600;}
 .chip{padding:7px 16px;border-radius:20px;border:none;background:var(--card);color:var(--sub);font-size:13px;cursor:pointer;box-shadow:0 1px 2px rgba(0,0,0,.04);}
 .chip.active{background:var(--primary);color:#fff;font-weight:600;}
 .search{width:100%;padding:11px 14px;border:1px solid var(--line);border-radius:12px;background:var(--card);font-size:14px;color:var(--text);outline:none;margin-bottom:12px;}
@@ -320,6 +321,7 @@ details[open] summary::before{content:"▾ ";}
       <button class="chip active" data-f="all" onclick="setFilter('all')">全部</button>
       <button class="chip" data-f="expense" onclick="setFilter('expense')">支出</button>
       <button class="chip" data-f="income" onclick="setFilter('income')">收入</button>
+      <button class="chip chip-quick" onclick="quickFill()">⚡ 快速记账</button>
     </div>
     <div class="search-row">
       <input class="search" id="searchInput" placeholder="🔍 搜索商户 / 备注" autocomplete="off">
@@ -485,22 +487,29 @@ function uid(){ return Date.now().toString(36) + Math.random().toString(36).slic
 
 const DEFAULT_CATS = [
   {id:'餐饮',icon:'🍜'},{id:'交通',icon:'🚗'},{id:'购物',icon:'🛍️'},
-  {id:'娱乐',icon:'🎮'},{id:'医疗',icon:'💊'},{id:'其他',icon:'❓'}
+  {id:'娱乐',icon:'🎮'},{id:'医疗',icon:'💊'},{id:'日用',icon:'🧾'}
 ];
 let CATS = load(KEY_CATS, DEFAULT_CATS);
+/* 兼容迁移：旧默认分类里是「其他」，按新规则兜底分类叫「日用」 */
+if(!CATS.some(c => c.id === '日用')){
+  const o = CATS.find(c => c.id === '其他');
+  if(o){ o.id = '日用'; saveCats(); }
+}
 function saveCats(){ localStorage.setItem(KEY_CATS, JSON.stringify(CATS)); }
 
 /* 内置规则：高频消费先覆盖，学习规则可叠加 */
 const DEFAULT_RULES = [
   ['瑞幸','餐饮'],['星巴克','餐饮'],['肯德基','餐饮'],['麦当劳','餐饮'],['海底捞','餐饮'],['汉堡','餐饮'],['烧烤','餐饮'],
   ['美团','餐饮'],['饿了么','餐饮'],['外卖','餐饮'],['奶茶','餐饮'],['咖啡','餐饮'],['蜜雪冰城','餐饮'],['茶百道','餐饮'],['食堂','餐饮'],['餐厅','餐饮'],['饭店','餐饮'],
-  ['滴滴','交通'],['高德','交通'],['打车','交通'],['出租车','交通'],['地铁','交通'],['公交','交通'],['12306','交通'],['铁路','交通'],['高铁','交通'],['加油','交通'],['停车','交通'],['哈啰','交通'],
-  ['淘宝','购物'],['天猫','购物'],['京东','购物'],['拼多多','购物'],['超市','购物'],['便利店','购物'],['商场','购物'],['优衣库','购物'],['无印良品','购物'],['唯品会','购物'],
-  ['电费','其他'],['水费','其他'],['燃气','其他'],['房租','其他'],['物业','其他'],['宽带','其他'],
+  ['牛奶','餐饮'],['烧饼','餐饮'],['面包','餐饮'],['米饭','餐饮'],['面条','餐饮'],['炒饭','餐饮'],['拌面','餐饮'],['拉面','餐饮'],['零食','餐饮'],['小吃','餐饮'],
+  ['滴滴','交通'],['高德','交通'],['打车','交通'],['出行','交通'],['出租车','交通'],['地铁','交通'],['公交','交通'],['12306','交通'],['铁路','交通'],['高铁','交通'],['加油','交通'],['停车','交通'],['哈啰','交通'],['百度地图','交通'],
+  ['淘宝','购物'],['天猫','购物'],['京东','购物'],['拼多多','购物'],['超市','购物'],['便利店','购物'],['商场','购物'],['优衣库','购物'],['无印良品','购物'],['唯品会','购物'],['水果','购物'],
+  ['电费','日用'],['水费','日用'],['燃气','日用'],['房租','日用'],['物业','日用'],['宽带','日用'],
   ['电影','娱乐'],['KTV','娱乐'],['游戏','娱乐'],['steam','娱乐'],['腾讯视频','娱乐'],['爱奇艺','娱乐'],['哔哩哔哩','娱乐'],['B站','娱乐'],['会员','娱乐'],['网易云','娱乐'],
   ['医院','医疗'],['药房','医疗'],['药店','医疗'],['诊所','医疗'],['挂号','医疗'],['口腔','医疗'],
-  ['书店','其他'],['课程','其他'],['培训','其他'],['得到','其他'],['知乎','其他'],['樊登','其他'],
-  ['话费','其他'],['移动','其他'],['联通','其他'],['电信','其他'],['流量','其他']
+  ['书店','日用'],['课程','日用'],['培训','日用'],['得到','日用'],['知乎','日用'],['樊登','日用'],
+  ['话费','日用'],['移动','日用'],['联通','日用'],['电信','日用'],['流量','日用'],
+  ['水','餐饮']
 ];
 
 function categorize(merchant){
@@ -666,7 +675,7 @@ function addCat(){
   toast('已添加分类：'+n);
 }
 function delCat(id){
-  if(id === '其他'){ toast('「其他」分类不可删除'); return; }
+  if(id === '日用'){ toast('「日用」分类不可删除'); return; }
   if(!confirm('删除分类「'+id+'」？该分类下的账单会保留，但显示为 ❓')) return;
   CATS = CATS.filter(c => c.id !== id);
   saveCats();
@@ -760,7 +769,7 @@ function applyUrlAdd(){
   const type = p.get('type') === 'income' ? 'income' : 'expense';
   let catId = cat;
   if(cat){ const c = CATS.find(x => x.id === cat || x.icon === cat); catId = c ? c.id : ''; }
-  if(!catId) catId = categorize(merchant) || '其他';
+  if(!catId) catId = categorize(merchant) || '日用';
   const ts = Date.now();
   txs.push({id:uid(), fen, type, cat:catId, merchant, note:'', date:ts, source:'shortcut', externalID:'', createdAt:Date.now()});
   saveTxs();
@@ -794,8 +803,8 @@ function saveManual(){
   const note = document.getElementById('noteInput').value.trim();
   const auto = merchant ? categorize(merchant) : null;
   let cat = auto || curCat;
-  /* 学习：用户选了分类且与自动分类不同（且不是"其他"）→ 记住用户的选择 */
-  if(merchant && curCat !== '其他' && curCat !== auto) learn(merchant, curCat);
+  /* 学习：用户选了分类且与自动分类不同（且不是"日用"）→ 记住用户的选择 */
+  if(merchant && curCat !== '日用' && curCat !== auto) learn(merchant, curCat);
   const dv = document.getElementById('dateInput').value;
   let ts = Date.now();
   if(dv){ const d = new Date(dv+'T00:00:00'); const n = new Date(); ts = new Date(d.getFullYear(), d.getMonth(), d.getDate(), n.getHours(), n.getMinutes()).getTime(); }
@@ -1059,7 +1068,7 @@ function saveEdit(){
     const d = new Date(dv+'T00:00:00'); const o = new Date(t.date);
     t.date = new Date(d.getFullYear(), d.getMonth(), d.getDate(), o.getHours(), o.getMinutes()).getTime();
   }
-  if(merchant && editCat !== '其他' && editCat !== oldCat) learn(merchant, editCat);
+  if(merchant && editCat !== '日用' && editCat !== oldCat) learn(merchant, editCat);
   saveTxs(); closeEdit(); fillMonthSelect(); renderList(); toast('已保存');
 }
 function delTx(){
@@ -1162,10 +1171,10 @@ function parseAlipay(rows){
     /* 新版优先用交易分类（餐饮美食→餐饮等）直接归类，匹配不上再走商户关键词 */
     let cat = null;
     if(isNew && row[ci.cat2]){
-      const catMap = {'餐饮美食':'餐饮','交通出行':'交通','日用百货':'购物','服饰美容':'购物','休闲娱乐':'娱乐','医疗健康':'医疗','数码电器':'购物','家用电器':'购物','充值缴费':'其他','居住出行':'交通','文化休闲':'娱乐','公益捐赠':'其他','转账红包':'其他','信用借还':'其他','投资理财':'其他'};
+      const catMap = {'餐饮美食':'餐饮','交通出行':'交通','日用百货':'购物','服饰美容':'购物','休闲娱乐':'娱乐','医疗健康':'医疗','数码电器':'购物','家用电器':'购物','充值缴费':'日用','居住出行':'交通','文化休闲':'娱乐','公益捐赠':'日用','转账红包':'日用','信用借还':'日用','投资理财':'日用'};
       cat = catMap[row[ci.cat2]] || null;
     }
-    if(!cat) cat = categorize(row[ci.merchant]) || '其他';
+    if(!cat) cat = categorize(row[ci.merchant]) || '日用';
     bills.push({fen, type: t.includes('支出') ? 'expense':'income', cat,
       merchant: row[ci.merchant], note: row[noteI] || '', date: d.getTime(), source:'alipay',
       externalID: (ci.id>=0 ? row[ci.id] : '') || (ci.id2>=0 ? row[ci.id2] : '')});
@@ -1363,7 +1372,7 @@ function showPreview(bills){
     const key = b.source+'|'+b.externalID;
     if(!b.externalID || seen.has(key)){ dup++; continue; }
     add++;
-    if(b.cat === '其他') uncls++;
+    if(b.cat === '日用') uncls++;
     if(b.type === 'expense') expSum += b.fen; else incSum += b.fen;
   }
   const srcName = (bills[0] && bills[0].source === 'alipay') ? '支付宝' : (bills[0] && bills[0].source === 'wechat') ? '微信' : '文本';
@@ -1389,7 +1398,7 @@ function showPreview(bills){
     row.appendChild(el('div','tx-ic', catIcon(b.cat)));
     const main = el('div','tx-main');
     main.appendChild(el('div','tx-merchant', b.merchant));
-    main.appendChild(el('div','tx-note', b.note + (b.cat==='其他' ? ' · 待分类' : '')));
+    main.appendChild(el('div','tx-note', b.note + (b.cat==='日用' ? ' · 待分类' : '')));
     row.appendChild(main);
     row.appendChild(el('div','tx-amt '+(b.type==='expense'?'red':'green'), (b.type==='expense'?'−':'+')+'¥'+fmtFen(b.fen)));
   });
@@ -1428,7 +1437,7 @@ function parseWeChat(rows){
       ts = d.getTime();
     }
     if(isNaN(ts)) continue;
-    bills.push({fen, type: t === '支出' ? 'expense':'income', cat: categorize(row[ci.merchant]) || '其他',
+    bills.push({fen, type: t === '支出' ? 'expense':'income', cat: categorize(row[ci.merchant]) || '日用',
       merchant: row[ci.merchant], note: row[ci.note] || '', date: ts, source:'wechat', externalID: row[ci.id]});
   }
   return bills.length ? bills : null;
@@ -1473,7 +1482,7 @@ function parseFreeText(text){
       /* 去重 key：用行内容做哈希，避免同一段文字重复粘贴重复入账 */
       let h = 5381;
       for(let i=0;i<line.length;i++){ h = ((h*33) ^ line.charCodeAt(i)) >>> 0; }
-      bills.push({fen, type, cat: categorize(merchant) || '其他', merchant, note: '', date: d.getTime(), source:'text', externalID: 't'+h.toString(36)});
+      bills.push({fen, type, cat: categorize(merchant) || '日用', merchant, note: '', date: d.getTime(), source:'text', externalID: 't'+h.toString(36)});
     }
   }
   return bills.length ? bills : null;
@@ -1538,7 +1547,7 @@ function handleParsed(text){
     const key = b.source+'|'+b.externalID;
     if(!b.externalID || seen.has(key)){ dup++; continue; }
     add++;
-    if(b.cat === '其他') uncls++;
+    if(b.cat === '日用') uncls++;
     if(b.type === 'expense') expSum += b.fen; else incSum += b.fen;
   }
   const srcName = (bills[0] && bills[0].source === 'alipay') ? '支付宝' : (bills[0] && bills[0].source === 'wechat') ? '微信' : '文本';
@@ -1564,7 +1573,7 @@ function handleParsed(text){
     row.appendChild(el('div','tx-ic', catIcon(b.cat)));
     const main = el('div','tx-main');
     main.appendChild(el('div','tx-merchant', b.merchant));
-    main.appendChild(el('div','tx-note', b.note + (b.cat==='其他' ? ' · 待分类' : '')));
+    main.appendChild(el('div','tx-note', b.note + (b.cat==='日用' ? ' · 待分类' : '')));
     row.appendChild(main);
     row.appendChild(el('div','tx-amt '+(b.type==='expense'?'red':'green'), (b.type==='expense'?'−':'+')+'¥'+fmtFen(b.fen)));
   });
