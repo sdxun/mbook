@@ -490,10 +490,11 @@ const DEFAULT_CATS = [
   {id:'娱乐',icon:'🎮'},{id:'医疗',icon:'💊'},{id:'日用',icon:'🧾'}
 ];
 let CATS = load(KEY_CATS, DEFAULT_CATS);
-/* 兼容迁移：旧默认分类里是「其他」，按新规则兜底分类叫「日用」 */
+/* 兼容迁移：确保存在「日用」兜底分类（旧默认是「其他」，改名；自定义分类里没有则追加） */
 if(!CATS.some(c => c.id === '日用')){
   const o = CATS.find(c => c.id === '其他');
-  if(o){ o.id = '日用'; saveCats(); }
+  if(o){ o.id = '日用'; } else { CATS.push({id:'日用', icon:'🧾'}); }
+  saveCats();
 }
 function saveCats(){ localStorage.setItem(KEY_CATS, JSON.stringify(CATS)); }
 
