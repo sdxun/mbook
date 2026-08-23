@@ -2100,6 +2100,13 @@ applyUrlAdd();
 /* 点击任意空白处收回左滑展开的删除钮 */
 document.addEventListener('touchstart', function(e){ if(!e.target.closest('.tx-row-wrap')) closeOtherSwipes(null); }, {passive:true});
 document.addEventListener('click', function(e){ if(!e.target.closest('.tx-row-wrap')) closeOtherSwipes(null); });
+/* 点击分类管理面板外自动收回（「➕ 分类管理」格子除外，它自己 toggle） */
+document.addEventListener('click', function(e){
+  if(e.target.closest && e.target.closest('#catMgr')) return;
+  if(e.target.closest && e.target.closest('.cat-mgr-item-grid')) return;
+  const m = document.getElementById('catMgr');
+  if(m && m.style.display !== 'none') m.style.display = 'none';
+});
 /* PWA：注册 service worker，支持离线 */
 if('serviceWorker' in navigator){
   navigator.serviceWorker.register('./sw.js').catch(function(){ /* 不支持时静默 */ });
