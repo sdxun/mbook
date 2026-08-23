@@ -899,18 +899,27 @@ function parseAlipay(rows){
   const h = rows[hi];
   const ci = {
     id: colIdx(h,'交易号'), amount: colIdx(h,'金额(元)'), type: colIdx(h,'收/支'),
-    time: colIdx(h,'交易创建时间'), merchant: colIdx(h,'交易对方'), note: colIdx(h,'商品名称'), status: colIdx(h,'交易状态')
+    time: colIdx(h,'交易创建时间'), merchant: colIdx(h,'交易对方'), note: colIdx(h,'商品名称'), status: colIdx(h,'交易状态'),
+    ttype: colIdx(h,'类型'), refund: colIdx(h,'成功退款(元)')
   };
   if(ci.id<0 || ci.amount<0 || ci.type<0 || ci.time<0 || ci.merchant<0 || ci.status<0) return null;
   const bills = [];
   for(let r = hi+1; r < rows.length; r++){
     const row = rows[r];
     if(row.length <= Math.max(ci.amount, ci.status)) continue;
-    if(!row[ci.status].includes('成功')) continue;
-    const fen = yuanToFen(row[ci.amount]);
-    if(fen === null || fen <= 0) continue;
+    const st = row[ci.status] || '';
+    /* 过滤1：跳过不计收支 */
     const t = row[ci.type];
     if(!t.includes('支出') && !t.includes('收入')) continue;
+    /* 过滤2：只保留交易成功（退款成功也含"成功"，需配合过滤3排除） */
+    if(!st.includes('成功')) continue;
+    /* 过滤3：退款类即使标记为收入也跳过 */
+    const isRefund = st.includes('退款')
+      || (ci.refund >= 0 && (parseFloat(row[ci.refund]) || 0) > 0)
+      || (ci.ttype >= 0 && (row[ci.ttype]||'').includes('退款'));
+    if(isRefund) continue;
+    const fen = yuanToFen(row[ci.amount]);
+    if(fen === null || fen <= 0) continue;
     const d = new Date(row[ci.time].replace(' ','T'));
     if(isNaN(d.getTime())) continue;
     bills.push({fen, type: t.includes('支出') ? 'expense':'income', cat: categorize(row[ci.merchant]) || '其他',
