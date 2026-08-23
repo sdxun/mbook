@@ -87,6 +87,9 @@ main{padding:12px 16px calc(100px + env(safe-area-inset-bottom));}
 .btn-primary{width:100%;padding:15px;border:none;border-radius:14px;background:var(--primary);color:#fff;font-size:17px;font-weight:600;cursor:pointer;}
 .btn-primary.small{width:auto;padding:10px 18px;font-size:14px;border-radius:12px;}
 .btn-ghost{width:100%;padding:12px;border:1px solid var(--line);border-radius:12px;background:var(--card);color:var(--text);font-size:14px;cursor:pointer;margin-top:8px;}
+.export-note-row{margin:10px 0 0;}
+.export-note-row input{width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--text);font-size:14px;outline:none;}
+.export-note-row input:focus{border-color:var(--primary);}
 .btn-ghost.danger{color:var(--red);border-color:var(--red-bg);}
 .btn-ghost.small{width:auto;padding:8px 14px;font-size:13px;border-radius:10px;margin:6px 6px 0 0;}
 .row2{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;}
@@ -324,7 +327,7 @@ details[open] summary::before{content:"▾ ";}
         </div>
         <div class="h-date-pill" style="flex:1;justify-content:center;">
           <select id="statYearSel"></select>
-          <span class="h-pill-sep">/</span>
+          <span class="h-pill-sep" id="statPillSep">/</span>
           <select id="statMonthSel" style="display:none"></select>
         </div>
         <button class="stat-today" onclick="statToday()">本月</button>
@@ -382,7 +385,11 @@ details[open] summary::before{content:"▾ ";}
     </details>
     <div class="card">
       <h3>💾 数据管理</h3>
+      <div class="export-note-row">
+        <input id="exportNote" type="text" maxlength="100" placeholder="备注（导出时写入文件，如：8月账单）">
+      </div>
       <button class="btn-ghost" onclick="exportCSV()">📤 导出数据（CSV）</button>
+      <button class="btn-ghost" onclick="exportBackup()">🗄 导出备份（JSON）</button>
       <button class="btn-ghost" onclick="document.getElementById('backupInput').click()">📥 导入备份</button>
       <input type="file" id="backupInput" accept=".json,application/json" style="display:none">
       <button class="btn-ghost danger" onclick="clearAll()">🗑 清空所有数据</button>
@@ -1143,6 +1150,7 @@ function setStatMode(md){
   document.getElementById('segModeMonth').classList.toggle('active', md==='month');
   document.getElementById('segModeYear').classList.toggle('active', md==='year');
   document.getElementById('statMonthSel').style.display = md==='month' ? '' : 'none';
+  document.getElementById('statPillSep').style.display = md==='month' ? '' : 'none';
   renderStats();
 }
 function statToday(){
@@ -1415,6 +1423,7 @@ function renderPie(){
 }
 function exportCSV(){
   if(!txs.length){ toast('没有数据可导出'); return; }
+  const note = (document.getElementById('exportNote').value||'').trim();
   const lines = ['时间,类型,分类,商户,备注,金额(元),来源'];
   txs.slice().sort((a,b)=>a.date-b.date).forEach(t => {
     lines.push([fmtDateTime(t.date), t.type==='expense'?'支出':'收入', t.cat, t.merchant, t.note, fmtFen(t.fen), t.source].map(csvEsc).join(','));
@@ -1424,6 +1433,7 @@ function exportCSV(){
   lines.push('');
   lines.push('# 导出备注');
   lines.push('# 导出时间：' + new Date().toLocaleString());
+  if(note) lines.push('# 备注：' + note);
   lines.push('# 账单笔数：' + txs.length + ' 笔');
   lines.push('# 总支出：' + fmtFen(exp) + ' 元，总收入：' + fmtFen(inc) + ' 元');
   lines.push('# 说明：本文件由「随手记」导出，含所有记账数据，可重新导入。');
@@ -1436,7 +1446,8 @@ function exportCSV(){
   toast('已导出 CSV');
 }
 function exportBackup(){
-  const data = {version:1, exportedAt:new Date().toISOString(), txs, rules:learnedRules};
+  const note = (document.getElementById('exportNote').value||'').trim();
+  const data = {version:1, exportedAt:new Date().toISOString(), note: note||'', txs, rules:learnedRules};
   const blob = new Blob([JSON.stringify(data)], {type:'application/json'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
@@ -1457,7 +1468,8 @@ function importBackup(file){
       const kws = new Set(learnedRules.map(r=>r.kw));
       for(const r of (data.rules||[])){ if(!kws.has(r.kw)){ learnedRules.push(r); kws.add(r.kw); addR++; } }
       saveTxs(); saveRules(); renderList(); renderRules();
-      toast('导入完成：新增 '+addT+' 笔账单，'+addR+' 条规则');
+      const nb = data.note ? '，备注：'+data.note : '';
+      toast('导入完成：新增 '+addT+' 笔账单，'+addR+' 条规则'+nb);
     }catch(e){ toast('备份文件解析失败'); }
   };
   reader.readAsText(file);
