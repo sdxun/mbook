@@ -101,6 +101,11 @@ main{padding:12px 16px calc(100px + env(safe-area-inset-bottom));}
 .chip{padding:7px 16px;border-radius:20px;border:none;background:var(--card);color:var(--sub);font-size:13px;cursor:pointer;box-shadow:0 1px 2px rgba(0,0,0,.04);}
 .chip.active{background:var(--primary);color:#fff;font-weight:600;}
 .search{width:100%;padding:11px 14px;border:1px solid var(--line);border-radius:12px;background:var(--card);font-size:14px;color:var(--text);outline:none;margin-bottom:12px;}
+.search-row{display:flex;align-items:center;gap:6px;margin-bottom:6px}
+.search-row .search{flex:1;min-width:0}
+.reset-filter{white-space:nowrap;flex-shrink:0}
+.filter-row{margin-top:6px}
+
 .search:focus{border-color:var(--primary);}
 .search-row{display:flex;align-items:center;gap:6px;margin-bottom:10px;}
 .search-row select{flex:1;min-width:0;padding:9px 10px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--text);font-size:14px;-webkit-appearance:none;appearance:none;}
@@ -299,8 +304,11 @@ details[open] summary::before{content:"▾ ";}
       <button class="chip" data-f="expense" onclick="setFilter('expense')">支出</button>
       <button class="chip" data-f="income" onclick="setFilter('income')">收入</button>
     </div>
-    <input class="search" id="searchInput" placeholder="🔍 搜索商户 / 备注" autocomplete="off">
     <div class="search-row">
+      <input class="search" id="searchInput" placeholder="🔍 搜索商户 / 备注" autocomplete="off">
+      <button class="btn-ghost small reset-filter" onclick="resetFilter()">🔄 重置</button>
+    </div>
+    <div class="search-row filter-row">
       <select id="catFilter" onchange="setCatFilter(this.value)"><option value="">全部分类</option></select>
       <input class="amt-filter" id="amtMin" inputmode="decimal" placeholder="金额≥">
       <span class="amt-tilde">~</span>
@@ -734,6 +742,19 @@ document.getElementById('searchInput').addEventListener('input', function(){
 });
 function setCatFilter(v){
   catF = v;
+  renderList();
+}
+function resetFilter(){
+  filter = 'all';
+  searchQ = '';
+  catF = '';
+  amtMinF = null;
+  amtMaxF = null;
+  document.querySelectorAll('.chip').forEach(c => c.classList.toggle('active', c.dataset.f==='all'));
+  const si = document.getElementById('searchInput'); if(si) si.value = '';
+  const cf = document.getElementById('catFilter'); if(cf) cf.value = '';
+  const mn = document.getElementById('amtMin'); if(mn) mn.value = '';
+  const mx = document.getElementById('amtMax'); if(mx) mx.value = '';
   renderList();
 }
 function fillCatFilter(){
