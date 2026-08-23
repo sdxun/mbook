@@ -639,7 +639,7 @@ function parseFreeText(text){
       if(neg){ amount = -val; }
       else if(income){ amount = val; }
       const date = dm[0].replace(/[年\/.]/g,'-').replace(/月/g,'-').replace(/日/g,'');
-      const t = {id: 'txt_'+Date.now()+'_'+bills.length, date, name: line.trim().slice(0,60), amount, category: autoCategorize(line.trim())};
+      const t = {id: 'txt_'+Date.now()+'_'+bills.length, date, name: line.trim().slice(0,60), amount, category: categorize(line.trim())};
       bills.push(t);
     }
   }
