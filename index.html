@@ -42,8 +42,15 @@ main{padding:12px 16px calc(100px + env(safe-area-inset-bottom));}
 .amount-wrap .sym{font-size:30px;font-weight:600;color:var(--sub);}
 .amount-wrap input{font-size:46px;font-weight:700;width:58%;text-align:center;background:transparent;border:none;outline:none;color:var(--text);}
 .seg{display:flex;background:var(--card);border-radius:12px;padding:3px;margin:10px 0 14px;box-shadow:0 1px 3px rgba(0,0,0,.05);}
+.seg select{flex:1;padding:8px;border-radius:10px;border:none;background:var(--bg);font-size:14px;color:var(--text);margin:2px;}
 .seg button{flex:1;padding:10px;border-radius:10px;border:none;background:transparent;font-size:15px;color:var(--sub);font-weight:500;}
 .seg button.active{background:var(--primary);color:#fff;font-weight:600;}
+.budget-row{display:flex;gap:8px;align-items:center;margin-bottom:10px;}
+.budget-row input{flex:1;padding:10px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--text);font-size:15px;}
+.budget-bar{height:10px;border-radius:6px;background:var(--bg);overflow:hidden;margin-bottom:8px;}
+.budget-bar .bfill{height:100%;border-radius:6px;background:var(--primary);transition:width .3s;}
+.budget-info{font-size:13px;color:var(--dim);}
+.amt-hint{font-size:12px;color:var(--sub);text-align:center;margin-top:4px;}
 .cat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
 .cat-item{display:flex;flex-direction:column;align-items:center;gap:4px;padding:12px 0 10px;background:var(--card);border-radius:14px;border:2px solid transparent;cursor:pointer;}
 .cat-item.active{border-color:var(--primary);background:var(--primary-bg);}
@@ -150,9 +157,9 @@ details[open] summary::before{content:"▾ ";}
       <div class="h-sub" id="hSub"></div>
     </div>
     <div class="h-nav" id="hNav" style="display:none">
-      <button id="prevM">‹</button>
-      <span id="monthLabel"></span>
-      <button id="nextM">›</button>
+      <button id="prevM" onclick="setMonth(-1)">‹</button>
+      <select id="monthSelect" onchange="goMonth(this.value)"></select>
+      <button id="nextM" onclick="setMonth(1)">›</button>
     </div>
   </div>
 </header>
@@ -164,6 +171,7 @@ details[open] summary::before{content:"▾ ";}
       <span class="sym" id="amtSym">−</span>
       <input id="amountInput" type="text" inputmode="decimal" placeholder="0.00" autocomplete="off">
     </div>
+    <div class="amt-hint">可输入算式：12+3.5、100-20</div>
     <div class="seg" style="margin:14px 0 16px;">
       <button id="segExp" class="active" onclick="setType('expense')">支出</button>
       <button id="segInc" onclick="setType('income')">收入</button>
@@ -208,10 +216,19 @@ details[open] summary::before{content:"▾ ";}
         <div><span class="lbl">收入</span><span class="big green" id="stInc">¥0.00</span></div>
         <div><span class="lbl">结余</span><span class="big" id="stBal">¥0.00</span></div>
       </div>
-      <div class="seg">
-        <button class="seg-btn active" id="segMonth" onclick="setStatRange('month')">本月</button>
-        <button class="seg-btn" id="segYear" onclick="setStatRange('year')">今年</button>
+      <div class="seg" id="statSeg">
+        <select id="statYearSel"></select>
+        <select id="statMonthSel"></select>
       </div>
+    </div>
+    <div class="card" id="budgetCard">
+      <h3>🎯 每月预算</h3>
+      <div class="budget-row">
+        <input id="budgetInput" type="text" inputmode="decimal" placeholder="输入预算金额">
+        <button class="btn-ghost small" onclick="saveBudget()">保存</button>
+      </div>
+      <div class="budget-bar" id="budgetBar"></div>
+      <div class="budget-info" id="budgetInfo"></div>
     </div>
     <div class="card"><h3>近 7 天支出</h3><div class="bar-chart" id="barChart"></div></div>
     <div class="card"><h3 id="catBrkTitle">本月支出分类</h3><div id="catBreak"></div></div>
@@ -276,7 +293,8 @@ details[open] summary::before{content:"▾ ";}
 
 <script>
 /* ============ 数据层 ============ */
-const KEY_TXS = 'mbook_txs_v1', KEY_RULES = 'mbook_rules_v1';
+const KEY_TXS = 'mbook_txs_v1', KEY_RULES = 'mbook_rules_v1', KEY_BUDGET = 'mbook_budget_v1';
+let budget = load(KEY_BUDGET, {}); // { 'YYYY-M': fen }
 let txs = load(KEY_TXS, []);
 let learnedRules = load(KEY_RULES, []);
 
@@ -326,11 +344,24 @@ function learn(merchant, cat){
 /* ============ 金额工具（分，整数运算防精度错误） ============ */
 function yuanToFen(s){
   s = String(s).replace(/[¥￥,\s]/g, '');
-  const m = s.match(/^(-?)(\d+)(?:\.(\d+))?$/);
-  if(!m) return null;
-  let cents = m[3] ? m[3].slice(0,2).padEnd(2,'0') : '00';
-  let v = parseInt(m[2],10)*100 + parseInt(cents,10);
-  return m[1] ? -v : v;
+  if(!s) return null;
+  if(/[+\-]$/.test(s)) return null; // 尾随运算符如 "3+"
+  if(/^\+/.test(s)) return null;    // 纯加号开头
+  // 支持加减运算：如 12+3.5、100-20、25+8+2.5
+  const parts = s.split(/([+\-])/);
+  let total = 0, sign = 1, valid = false;
+  for(const p of parts){
+    if(p === '+'){ sign = 1; continue; }
+    if(p === '-'){ sign = -1; continue; }
+    if(!p) continue;
+    const m = p.match(/^(\d+)(?:\.(\d+))?$/);
+    if(!m) return null;
+    let cents = m[2] ? m[2].slice(0,2).padEnd(2,'0') : '00';
+    total += sign * (parseInt(m[1],10)*100 + parseInt(cents,10));
+    valid = true;
+  }
+  if(!valid) return null;
+  return total;
 }
 function fmtFen(fen){
   const neg = fen < 0;
@@ -354,7 +385,7 @@ function switchTab(t){
   document.getElementById('hTitle').textContent = TITLES[t];
   const nav = document.getElementById('hNav');
   if(t === 'list'){ nav.style.display='flex'; } else { nav.style.display='none'; }
-  if(t === 'stats') renderStats();
+  if(t === 'stats'){ fillStatSelects(); renderStats(); }
   if(t === 'list') renderList();
   if(t === 'import') renderRules();
 }
@@ -407,6 +438,25 @@ document.getElementById('merchantInput').addEventListener('input', function(){
 /* ============ 列表 ============ */
 let viewY = new Date().getFullYear(), viewM = new Date().getMonth();
 let filter = 'all', searchQ = '';
+const WEEK = ['周日','周一','周二','周三','周四','周五','周六'];
+function fillMonthSelect(){
+  const sel = document.getElementById('monthSelect');
+  const nowY = new Date().getFullYear();
+  let html = '';
+  for(let y = nowY - 2; y <= nowY + 1; y++){
+    for(let m = 0; m < 12; m++){
+      const v = y+'-'+m;
+      const selAttr = (y===viewY && m===viewM) ? ' selected' : '';
+      html += '<option value="'+v+'"'+selAttr+'>'+y+'年'+(m+1)+'月</option>';
+    }
+  }
+  sel.innerHTML = html;
+}
+function goMonth(v){
+  const [y, m] = v.split('-').map(Number);
+  viewY = y; viewM = m;
+  renderList();
+}
 function setMonth(delta){
   viewM += delta;
   if(viewM < 0){ viewM = 11; viewY--; }
@@ -423,7 +473,7 @@ document.getElementById('searchInput').addEventListener('input', function(){
   renderList();
 });
 function renderList(){
-  document.getElementById('monthLabel').textContent = viewY+'年'+(viewM+1)+'月';
+  document.getElementById('monthSelect').value = viewY+'-'+viewM;
   const monthTxs = txs.filter(t => { const d = new Date(t.date); return d.getFullYear()===viewY && d.getMonth()===viewM; });
   const exp = monthTxs.filter(t=>t.type==='expense').reduce((a,t)=>a+t.fen,0);
   const inc = monthTxs.filter(t=>t.type==='income').reduce((a,t)=>a+t.fen,0);
@@ -467,7 +517,8 @@ function txRow(t){
   row.appendChild(main);
   const right = el('div', null);
   right.appendChild(el('div','tx-amt '+(t.type==='expense'?'red':'green'), (t.type==='expense'?'−':'+')+'¥'+fmtFen(t.fen)));
-  right.appendChild(el('div','tx-time', fmtDateTime(t.date)));
+  const dt = new Date(t.date);
+  right.appendChild(el('div','tx-time', (dt.getMonth()+1)+'/'+dt.getDate()+' '+WEEK[dt.getDay()]));
   row.appendChild(right);
   row.onclick = () => openEdit(t.id);
   return row;
@@ -790,29 +841,74 @@ function clearLearned(){
 }
 
 /* ============ 统计 ============ */
-let statRange = 'month'; // month | year
-function setStatRange(r){
-  statRange = r;
-  document.getElementById('segMonth').classList.toggle('active', r==='month');
-  document.getElementById('segYear').classList.toggle('active', r==='year');
+let statY = new Date().getFullYear(), statM = new Date().getMonth(); // -1 = 全年
+function fillStatSelects(){
+  const ys = document.getElementById('statYearSel');
+  const ms = document.getElementById('statMonthSel');
+  const nowY = new Date().getFullYear();
+  let yh = '';
+  for(let y = nowY - 2; y <= nowY + 1; y++){
+    yh += '<option value="'+y+'"'+(y===statY?' selected':'')+'>'+y+'年</option>';
+  }
+  ys.innerHTML = yh;
+  let mh = '<option value="-1"'+(statM===-1?' selected':'')+'>全年</option>';
+  for(let m = 0; m < 12; m++){
+    mh += '<option value="'+m+'"'+(m===statM?' selected':'')+'>'+(m+1)+'月</option>';
+  }
+  ms.innerHTML = mh;
+  ys.onchange = () => { statY = parseInt(ys.value); renderStats(); };
+  ms.onchange = () => { statM = parseInt(ms.value); renderStats(); };
+}
+function setStatRange(r){ // 兼容旧调用（segMonth/segYear），现在用下拉
+  if(r==='year') statM = -1; else { statM = new Date().getMonth(); statY = new Date().getFullYear(); }
+  fillStatSelects(); renderStats();
+}
+function saveBudget(){
+  const v = parseFloat(document.getElementById('budgetInput').value);
+  if(!v || v <= 0){ toast('请输入有效预算金额'); return; }
+  const key = statY+'-'+statM;
+  budget[key] = Math.round(v*100);
+  localStorage.setItem(KEY_BUDGET, JSON.stringify(budget));
   renderStats();
+  toast('预算已保存：'+key);
+}
+function renderBudget(exp){
+  const key = statY+'-'+statM;
+  const b = budget[key];
+  const bar = document.getElementById('budgetBar');
+  const info = document.getElementById('budgetInfo');
+  const input = document.getElementById('budgetInput');
+  if(!b){
+    input.style.display = '';
+    bar.innerHTML = '';
+    info.textContent = '设置预算后，这里显示剩余比例';
+    return;
+  }
+  input.style.display = 'none';
+  const pct = Math.round(exp/b*100);
+  const remain = b - exp;
+  const over = remain < 0;
+  bar.innerHTML = '<div class="bfill" style="width:'+Math.min(100, pct)+'%;'+(over?'background:#e5484d':'')+'"></div>';
+  const remTxt = over ? '超支 ¥'+fmtFen(-remain) : '剩余 ¥'+fmtFen(remain);
+  info.textContent = '已用 '+pct+'%，'+remTxt+'（预算 ¥'+fmtFen(b)+'）';
 }
 function renderStats(){
   const now = new Date();
-  const y = now.getFullYear(), m = now.getMonth();
-  const inRange = statRange==='month'
-    ? t => { const d = new Date(t.date); return d.getFullYear()===y && d.getMonth()===m; }
-    : t => new Date(t.date).getFullYear()===y;
+  const y = statY, m = statM;
+  const inRange = m === -1
+    ? t => new Date(t.date).getFullYear()===y
+    : t => { const d = new Date(t.date); return d.getFullYear()===y && d.getMonth()===m; };
   const rangeTxs = txs.filter(inRange);
   const exp = rangeTxs.filter(t=>t.type==='expense').reduce((a,t)=>a+t.fen,0);
   const inc = rangeTxs.filter(t=>t.type==='income').reduce((a,t)=>a+t.fen,0);
-  const pre = statRange==='month' ? '本月' : '今年';
+  const pre = m===-1 ? y+'年' : y+'年'+(m+1)+'月';
   document.getElementById('stLabel').textContent = pre+'支出';
   document.getElementById('stExp').textContent = '¥'+fmtFen(exp);
   document.getElementById('stInc').textContent = '¥'+fmtFen(inc);
   document.getElementById('stBal').textContent = '¥'+fmtFen(inc-exp);
   document.getElementById('catBrkTitle').textContent = pre+'支出分类';
   document.getElementById('incBrkTitle').textContent = pre+'收入分类';
+  renderBudget(exp);
   /* 近7天 */
   const chart = document.getElementById('barChart');
   chart.innerHTML = '';
