@@ -208,6 +208,16 @@ details[open] summary::before{content:"▾ ";}
     </div>
     <div class="card"><h3>近 7 天支出</h3><div class="bar-chart" id="barChart"></div></div>
     <div class="card"><h3>本月支出分类</h3><div id="catBreak"></div></div>
+    <div class="card"><h3>本月收入分类</h3><div id="incBreak"></div></div>
+    <div class="card">
+      <button class="btn-ghost" onclick="exportCSV()">📤 导出数据（CSV）</button>
+      <button class="btn-ghost" onclick="exportBackup()">💾 备份全部数据</button>
+      <button class="btn-ghost" onclick="document.getElementById('backupInput').click()">📥 导入备份</button>
+      <input type="file" id="backupInput" accept=".json,application/json" style="display:none">
+      <button class="btn-ghost danger" onclick="clearAll()">🗑 清空所有数据</button>
+    </div>
+  </section>
+
     <div class="card">
       <button class="btn-ghost" onclick="exportCSV()">📤 导出数据（CSV）</button>
       <button class="btn-ghost" onclick="exportBackup()">💾 备份全部数据</button>
@@ -220,10 +230,9 @@ details[open] summary::before{content:"▾ ";}
   <!-- 自动记账 -->
   <section id="page-import" class="page">
     <div class="card tip">
-      <h3>📥 先导出你的账单</h3>
+      <h3>📥 导出账单</h3>
       <p><b>支付宝</b>：我的 → 账单 → 右上角 ⋯ → 开具交易流水证明 → 个人对账（发到邮箱）</p>
       <p><b>微信</b>：我 → 服务 → 钱包 → 账单 → 常见问题 → 下载账单 → 个人对账（发到邮箱）</p>
-      <p>收到邮件后把文件发到手机。注意：邮件附件是 <b>zip 压缩包</b>，需要先解压（密码：<b>身份证后 6 位</b>），再选里面的 csv 文件；或直接把 csv 内容/账单复制粘贴到下面 👇</p>
     </div>
     <div class="card">
       <button class="btn-primary" onclick="document.getElementById('fileInput').click()">📂 选择账单 CSV 文件</button>
@@ -279,9 +288,8 @@ function saveRules(){ localStorage.setItem(KEY_RULES, JSON.stringify(learnedRule
 function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,8); }
 
 const CATS = [
-  {id:'餐饮',icon:'🍜'},{id:'交通',icon:'🚗'},{id:'购物',icon:'🛍️'},{id:'居住',icon:'🏠'},
-  {id:'娱乐',icon:'🎮'},{id:'医疗',icon:'💊'},{id:'教育',icon:'📚'},{id:'通讯',icon:'📱'},
-  {id:'其他',icon:'❓'}
+  {id:'餐饮',icon:'🍜'},{id:'交通',icon:'🚗'},{id:'购物',icon:'🛍️'},
+  {id:'娱乐',icon:'🎮'},{id:'医疗',icon:'💊'},{id:'其他',icon:'❓'}
 ];
 
 /* 内置规则：高频消费先覆盖，学习规则可叠加 */
@@ -290,11 +298,11 @@ const DEFAULT_RULES = [
   ['美团','餐饮'],['饿了么','餐饮'],['外卖','餐饮'],['奶茶','餐饮'],['咖啡','餐饮'],['蜜雪冰城','餐饮'],['茶百道','餐饮'],['食堂','餐饮'],['餐厅','餐饮'],['饭店','餐饮'],
   ['滴滴','交通'],['高德','交通'],['打车','交通'],['出租车','交通'],['地铁','交通'],['公交','交通'],['12306','交通'],['铁路','交通'],['高铁','交通'],['加油','交通'],['停车','交通'],['哈啰','交通'],
   ['淘宝','购物'],['天猫','购物'],['京东','购物'],['拼多多','购物'],['超市','购物'],['便利店','购物'],['商场','购物'],['优衣库','购物'],['无印良品','购物'],['唯品会','购物'],
-  ['电费','居住'],['水费','居住'],['燃气','居住'],['房租','居住'],['物业','居住'],['宽带','居住'],
+  ['电费','其他'],['水费','其他'],['燃气','其他'],['房租','其他'],['物业','其他'],['宽带','其他'],
   ['电影','娱乐'],['KTV','娱乐'],['游戏','娱乐'],['steam','娱乐'],['腾讯视频','娱乐'],['爱奇艺','娱乐'],['哔哩哔哩','娱乐'],['B站','娱乐'],['会员','娱乐'],['网易云','娱乐'],
   ['医院','医疗'],['药房','医疗'],['药店','医疗'],['诊所','医疗'],['挂号','医疗'],['口腔','医疗'],
-  ['书店','教育'],['课程','教育'],['培训','教育'],['得到','教育'],['知乎','教育'],['樊登','教育'],
-  ['话费','通讯'],['移动','通讯'],['联通','通讯'],['电信','通讯'],['流量','通讯']
+  ['书店','其他'],['课程','其他'],['培训','其他'],['得到','其他'],['知乎','其他'],['樊登','其他'],
+  ['话费','其他'],['移动','其他'],['联通','其他'],['电信','其他'],['流量','其他']
 ];
 
 function categorize(merchant){
@@ -466,7 +474,7 @@ function txRow(t){
   row.onclick = () => openEdit(t.id);
   return row;
 }
-function catIcon(cat){ const c = CATS.find(x=>x.id===cat); return c ? c.icon : '❓'; }
+function catIcon(cat){ const c = CATS.find(x=>x.id===cat); return c ? c.icon : (cat==='居住'||cat==='教育'||cat==='通讯' ? '❓' : '❓'); }
 function el(tag, cls, text){ const e = document.createElement(tag); if(cls) e.className = cls; if(text !== undefined) e.textContent = text; return e; }
 
 /* ============ 编辑 ============ */
@@ -826,6 +834,25 @@ function renderStats(){
     row.appendChild(track);
     row.appendChild(el('span','sb-val', '¥'+fmtFen(fen)));
     brk.appendChild(row);
+  });
+  /* 收入分类占比 */
+  const ibrk = document.getElementById('incBreak');
+  ibrk.innerHTML = '';
+  const byIncCat = {};
+  monthTxs.filter(t=>t.type==='income').forEach(t => { byIncCat[t.cat] = (byIncCat[t.cat]||0) + t.fen; });
+  const ientries = Object.entries(byIncCat).sort((a,b)=>b[1]-a[1]);
+  if(!ientries.length){ ibrk.appendChild(el('div','empty','本月暂无收入')); return; }
+  const itotal = ientries.reduce((a,e)=>a+e[1],0);
+  ientries.forEach(([cat, fen]) => {
+    const row = el('div','sb-row');
+    row.appendChild(el('span','sb-label', catIcon(cat)+' '+cat));
+    const track = el('div','sb-track');
+    const fill = el('div','sb-fill');
+    fill.style.width = Math.max(2, Math.round(fen/itotal*100)) + '%';
+    track.appendChild(fill);
+    row.appendChild(track);
+    row.appendChild(el('span','sb-val', '¥'+fmtFen(fen)));
+    ibrk.appendChild(row);
   });
 }
 function exportCSV(){
