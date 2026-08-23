@@ -271,7 +271,7 @@ details[open] summary::before{content:"▾ ";}
         <button class="btn-ghost small" onclick="addCat()">添加</button>
       </div>
       <div class="cat-emoji-box">
-        <div class="cat-emoji-title">选择图标</div>
+        <div class="cat-emoji-title" id="catEmojiTitle">选择图标</div>
         <div class="cat-emoji-grid" id="catEmojiGrid"></div>
       </div>
     </div>
@@ -525,7 +525,7 @@ function switchTab(t){
   document.getElementById('hTitle').textContent = TITLES[t];
   const nav = document.getElementById('hNav');
   if(t === 'list'){ nav.style.display='flex'; } else { nav.style.display='none'; }
-  if(t === 'stats'){ fillStatSelects(); renderStats(); }
+  if(t === 'stats'){ fillStatSelects(); setStatMode(statMode); }
   if(t === 'list'){ fillMonthSelect(); fillCatFilter(); renderList(); }
   if(t === 'import') renderRules();
 }
@@ -556,17 +556,29 @@ function buildCatGrid(){
 }
 
 /* ============ 分类管理 ============ */
-var CAT_ICONS = ['🍜','🚗','🛍️','🎮','💊','🏠','📱','👕','🎁','✈️','🎬','📚','🐶','🐱','💄','⚽','☕','🍺','🧾','💼','👶','💍','🔧','🌿'];
+var CAT_ICONS = ['🍜','🚗','🛍️','🎮','💊','🏠','📱','👕','🎁','✈️','🎬','📚','🐶','🐱','💄','⚽','☕','🍺','🧾','💼','👶','💍','🔧','🌿','🍔','🍟','🍱','🍣','🍰','🍎','🥤','🧋','🎂','🍿','🏋️','🚲','🛵','🚕','✂️','💇','💻','📷','🎧','⛽','🅿️','🏥','🦷','👓','👜','🧸','🎨','🎤'];
 var curCatIcon = '🏷️';
+var editCatIconId = null; // 正在编辑图标的分类 id，null=新增分类模式
 function renderCatEmoji(){
   const g = document.getElementById('catEmojiGrid');
   if(!g) return;
+  const t = document.getElementById('catEmojiTitle');
+  if(t) t.textContent = editCatIconId ? '为「' + editCatIconId + '」选择图标' : '选择图标';
+  const cur = editCatIconId ? (CATS.find(c=>c.id===editCatIconId)||{}).icon : curCatIcon;
   g.innerHTML = '';
   CAT_ICONS.forEach(ic => {
     const d = document.createElement('div');
-    d.className = 'cat-emoji' + (ic===curCatIcon ? ' active' : '');
+    d.className = 'cat-emoji' + (ic===cur ? ' active' : '');
     d.textContent = ic;
-    d.onclick = () => { curCatIcon = ic; renderCatEmoji(); };
+    d.onclick = () => {
+      if(editCatIconId){
+        const c = CATS.find(x=>x.id===editCatIconId);
+        if(c){ c.icon = ic; saveCats(); }
+      } else {
+        curCatIcon = ic;
+      }
+      renderCatEmoji(); renderCatMgr(); buildCatGrid();
+    };
     g.appendChild(d);
   });
 }
@@ -574,7 +586,7 @@ function toggleCatMgr(){
   const m = document.getElementById('catMgr');
   const show = m.style.display === 'none';
   m.style.display = show ? '' : 'none';
-  if(show){ renderCatMgr(); renderCatEmoji(); }
+  if(show){ editCatIconId = null; renderCatMgr(); renderCatEmoji(); }
 }
 function renderCatMgr(){
   const box = document.getElementById('catMgrList');
@@ -585,8 +597,12 @@ function renderCatMgr(){
     ic.textContent = c.icon;
     ic.title = '点击更换图标';
     ic.onclick = () => {
-      const next = CAT_ICONS[(CAT_ICONS.indexOf(c.icon)+1) % CAT_ICONS.length];
-      c.icon = next; saveCats(); renderCatMgr(); buildCatGrid();
+      editCatIconId = c.id;
+      const m = document.getElementById('catMgr');
+      if(m.style.display === 'none'){ m.style.display = ''; }
+      renderCatEmoji();
+      const eb = document.getElementById('catEmojiBox');
+      if(eb) eb.scrollIntoView({behavior:'smooth', block:'nearest'});
     };
     const nm = el('span','nm', c.id);
     const del = el('button','del','✕');
