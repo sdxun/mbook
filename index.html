@@ -29,9 +29,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Helvetica Neue"
 header{position:sticky;top:0;z-index:40;background:var(--bg);padding-top:env(safe-area-inset-top);border-bottom:1px solid var(--line);}
 .h-inner{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;min-height:48px;}
 .h-title{font-size:20px;font-weight:700;}
-.h-nav{display:flex;align-items:center;gap:6px;}
-.h-nav button{border:none;background:var(--card);width:34px;height:34px;border-radius:10px;font-size:18px;color:var(--primary);font-weight:700;box-shadow:0 1px 2px rgba(0,0,0,.05);}
-.h-nav #goTodayBtn{width:auto;padding:0 12px;font-size:13px;font-weight:600;}
+.h-nav{display:flex;align-items:center;gap:8px;}
+.h-nav button{border:none;background:var(--card);width:34px;height:36px;border-radius:12px;font-size:18px;color:var(--primary);font-weight:700;box-shadow:0 1px 3px rgba(0,0,0,.06);}
+.h-nav .h-date-pill{display:flex;align-items:center;gap:2px;background:var(--card);border-radius:12px;padding:2px 10px;box-shadow:0 1px 3px rgba(0,0,0,.06);height:36px;}
+.h-nav .h-date-pill select{border:none;background:transparent;color:var(--text);font-size:15px;font-weight:700;padding:0 4px;text-align:center;-webkit-appearance:none;appearance:none;max-width:76px;}
+.h-nav .h-date-pill .h-pill-sep{color:var(--sub);font-size:13px;font-weight:400;}
+.h-nav .h-today{width:auto;padding:0 13px;font-size:13px;font-weight:600;background:var(--primary);color:#fff;}
 #monthLabel{font-size:15px;font-weight:600;min-width:100px;text-align:center;}
 .h-sub{font-size:12px;color:var(--sub);margin-top:2px;}
 main{padding:12px 16px calc(100px + env(safe-area-inset-bottom));}
@@ -55,6 +58,7 @@ main{padding:12px 16px calc(100px + env(safe-area-inset-bottom));}
 .stat-range .seg-btn{flex:1;padding:8px 14px;border-radius:10px;border:none;background:transparent;font-size:14px;color:var(--sub);font-weight:600;cursor:pointer;}
 .stat-range .seg-btn.active{background:var(--primary);color:#fff;}
 .stat-range select{flex:1;min-width:0;padding:8px;border-radius:10px;border:1px solid var(--line);background:var(--card);font-size:14px;color:var(--text);}
+.stat-range .stat-today{flex:0 0 auto;padding:8px 14px;border:none;border-radius:10px;background:var(--primary);color:#fff;font-size:13px;font-weight:600;}
 .seg select{flex:1;padding:8px;border-radius:10px;border:none;background:var(--bg);font-size:14px;color:var(--text);margin:2px;}
 .seg button{flex:1;padding:10px;border-radius:10px;border:none;background:transparent;font-size:15px;color:var(--sub);font-weight:500;}
 .seg button.active{background:var(--primary);color:#fff;font-weight:600;}
@@ -98,6 +102,17 @@ main{padding:12px 16px calc(100px + env(safe-area-inset-bottom));}
 .chip.active{background:var(--primary);color:#fff;font-weight:600;}
 .search{width:100%;padding:11px 14px;border:1px solid var(--line);border-radius:12px;background:var(--card);font-size:14px;color:var(--text);outline:none;margin-bottom:12px;}
 .search:focus{border-color:var(--primary);}
+.search-row{display:flex;align-items:center;gap:6px;margin-bottom:10px;}
+.search-row select{flex:1;min-width:0;padding:9px 10px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--text);font-size:14px;-webkit-appearance:none;appearance:none;}
+.amt-filter{width:64px;padding:9px 8px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--text);font-size:14px;text-align:center;}
+.amt-tilde{color:var(--sub);font-size:13px;}
+.cat-mgr-row{margin:10px 0 4px;display:flex;justify-content:flex-end;}
+.cat-mgr{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px;margin:4px 0 10px;}
+.cat-mgr-list{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;}
+.cat-mgr-item{display:flex;align-items:center;gap:6px;padding:6px 10px;border:1px solid var(--line);border-radius:20px;font-size:14px;background:var(--bg);}
+.cat-mgr-item .del{color:#e74c3c;font-size:12px;padding:0 2px;border:none;background:none;cursor:pointer;}
+.cat-mgr-add{display:flex;gap:6px;}
+.cat-mgr-add input{flex:1;padding:8px 10px;border:1px solid var(--line);border-radius:10px;font-size:14px;background:var(--bg);color:var(--text);min-width:0;}
 .day-group{margin-bottom:8px;}
 .day-head{display:flex;justify-content:space-between;align-items:baseline;font-size:13px;color:var(--sub);padding:10px 4px 4px;}
 .day-head .ds{font-weight:600;color:var(--text);font-size:14px;}
@@ -209,10 +224,13 @@ details[open] summary::before{content:"▾ ";}
     </div>
     <div class="h-nav" id="hNav" style="display:none">
       <button id="prevM" onclick="setMonth(-1)">‹</button>
-      <select id="listYearSel" onchange="goListYear(this.value)"></select>
-      <select id="monthSelect" onchange="goMonth(this.value)"></select>
+      <div class="h-date-pill">
+        <select id="listYearSel" onchange="goListYear(this.value)"></select>
+        <span class="h-pill-sep">/</span>
+        <select id="monthSelect" onchange="goMonth(this.value)"></select>
+      </div>
       <button id="nextM" onclick="setMonth(1)">›</button>
-      <button id="goTodayBtn" onclick="goToday()">本月</button>
+      <button id="goTodayBtn" class="h-today" onclick="goToday()">本月</button>
     </div>
   </div>
 </header>
@@ -235,6 +253,15 @@ details[open] summary::before{content:"▾ ";}
       <button id="segInc" onclick="setType('income')">收入</button>
     </div>
     <div class="cat-grid" id="catGrid"></div>
+    <div class="cat-mgr-row"><button class="btn-ghost small" onclick="toggleCatMgr()">⚙️ 管理分类</button></div>
+    <div id="catMgr" class="cat-mgr" style="display:none">
+      <div class="cat-mgr-list" id="catMgrList"></div>
+      <div class="cat-mgr-add">
+        <input id="catNewName" type="text" placeholder="新分类名称" maxlength="6">
+        <input id="catNewIcon" type="text" placeholder="图标(emoji)" maxlength="4" style="width:64px">
+        <button class="btn-ghost small" onclick="addCat()">添加</button>
+      </div>
+    </div>
     <div class="field">
       <label>商户 / 备注</label>
       <input id="merchantInput" type="text" placeholder="交易对方（如：瑞幸咖啡）" autocomplete="off">
@@ -260,6 +287,12 @@ details[open] summary::before{content:"▾ ";}
       <button class="chip" data-f="income" onclick="setFilter('income')">收入</button>
     </div>
     <input class="search" id="searchInput" placeholder="🔍 搜索商户 / 备注" autocomplete="off">
+    <div class="search-row">
+      <select id="catFilter" onchange="setCatFilter(this.value)"><option value="">全部分类</option></select>
+      <input class="amt-filter" id="amtMin" inputmode="decimal" placeholder="金额≥">
+      <span class="amt-tilde">~</span>
+      <input class="amt-filter" id="amtMax" inputmode="decimal" placeholder="金额≤">
+    </div>
     <div id="txList"></div>
   </section>
 
@@ -278,6 +311,7 @@ details[open] summary::before{content:"▾ ";}
         </div>
         <select id="statYearSel"></select>
         <select id="statMonthSel" style="display:none"></select>
+        <button class="stat-today" onclick="statToday()">本月</button>
       </div>
     </div>
     <div class="card" id="budgetCard">
@@ -364,7 +398,7 @@ details[open] summary::before{content:"▾ ";}
 
 <script>
 /* ============ 数据层 ============ */
-const KEY_TXS = 'mbook_txs_v1', KEY_RULES = 'mbook_rules_v1', KEY_BUDGET = 'mbook_budget_v1';
+const KEY_TXS = 'mbook_txs_v1', KEY_RULES = 'mbook_rules_v1', KEY_BUDGET = 'mbook_budget_v1', KEY_CATS = 'mbook_cats_v1';
 let budget = load(KEY_BUDGET, {}); // { 'YYYY-M': fen }
 let txs = load(KEY_TXS, []);
 let learnedRules = load(KEY_RULES, []);
@@ -374,10 +408,12 @@ function saveTxs(){ localStorage.setItem(KEY_TXS, JSON.stringify(txs)); }
 function saveRules(){ localStorage.setItem(KEY_RULES, JSON.stringify(learnedRules)); }
 function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,8); }
 
-const CATS = [
+const DEFAULT_CATS = [
   {id:'餐饮',icon:'🍜'},{id:'交通',icon:'🚗'},{id:'购物',icon:'🛍️'},
   {id:'娱乐',icon:'🎮'},{id:'医疗',icon:'💊'},{id:'其他',icon:'❓'}
 ];
+let CATS = load(KEY_CATS, DEFAULT_CATS);
+function saveCats(){ localStorage.setItem(KEY_CATS, JSON.stringify(CATS)); }
 
 /* 内置规则：高频消费先覆盖，学习规则可叠加 */
 const DEFAULT_RULES = [
@@ -457,7 +493,7 @@ function switchTab(t){
   const nav = document.getElementById('hNav');
   if(t === 'list'){ nav.style.display='flex'; } else { nav.style.display='none'; }
   if(t === 'stats'){ fillStatSelects(); renderStats(); }
-  if(t === 'list'){ fillMonthSelect(); renderList(); }
+  if(t === 'list'){ fillMonthSelect(); fillCatFilter(); renderList(); }
   if(t === 'import') renderRules();
 }
 
@@ -480,6 +516,46 @@ function buildCatGrid(){
     g.appendChild(d);
   });
 }
+
+/* ============ 分类管理 ============ */
+function toggleCatMgr(){
+  const m = document.getElementById('catMgr');
+  const show = m.style.display === 'none';
+  m.style.display = show ? '' : 'none';
+  if(show) renderCatMgr();
+}
+function renderCatMgr(){
+  const box = document.getElementById('catMgrList');
+  box.innerHTML = '';
+  CATS.forEach(c => {
+    const it = el('div','cat-mgr-item', c.icon+' '+c.id);
+    const del = el('button','del','✕');
+    del.onclick = () => delCat(c.id);
+    it.appendChild(del);
+    box.appendChild(it);
+  });
+}
+function addCat(){
+  const n = document.getElementById('catNewName').value.trim();
+  const ic = document.getElementById('catNewIcon').value.trim() || '🏷️';
+  if(!n){ toast('请输入分类名称'); return; }
+  if(CATS.some(c => c.id === n)){ toast('分类已存在'); return; }
+  CATS.push({id:n, icon:ic});
+  saveCats();
+  document.getElementById('catNewName').value = '';
+  document.getElementById('catNewIcon').value = '';
+  renderCatMgr(); buildCatGrid(); fillCatFilter();
+  toast('已添加分类：'+n);
+}
+function delCat(id){
+  if(id === '其他'){ toast('「其他」分类不可删除'); return; }
+  if(!confirm('删除分类「'+id+'」？该分类下的账单会保留，但显示为 ❓')) return;
+  CATS = CATS.filter(c => c.id !== id);
+  saveCats();
+  renderCatMgr(); buildCatGrid(); fillCatFilter();
+  toast('已删除分类：'+id);
+}
+
 function amtOp(op){
   const inp = document.getElementById('amountInput');
   if(op === 'c'){ inp.value = ''; inp.focus(); return; }
@@ -518,7 +594,7 @@ document.getElementById('merchantInput').addEventListener('input', function(){
 
 /* ============ 列表 ============ */
 let viewY = new Date().getFullYear(), viewM = new Date().getMonth();
-let filter = 'all', searchQ = '';
+let filter = 'all', searchQ = '', catF = '', amtMinF = null, amtMaxF = null;
 const WEEK = ['周日','周一','周二','周三','周四','周五','周六'];
 function txYears(){
   const years = new Set(txs.map(t => new Date(t.date).getFullYear()));
@@ -579,6 +655,25 @@ document.getElementById('searchInput').addEventListener('input', function(){
   searchQ = this.value.trim().toLowerCase();
   renderList();
 });
+function setCatFilter(v){
+  catF = v;
+  renderList();
+}
+function fillCatFilter(){
+  const sel = document.getElementById('catFilter');
+  if(!sel) return;
+  let h = '<option value="">全部分类</option>';
+  CATS.forEach(c => { h += '<option value="'+c.id+'"'+(catF===c.id?' selected':'')+'>'+c.icon+' '+c.id+'</option>'; });
+  sel.innerHTML = h;
+}
+document.getElementById('amtMin').addEventListener('input', function(){
+  amtMinF = yuanToFen(this.value);
+  renderList();
+});
+document.getElementById('amtMax').addEventListener('input', function(){
+  amtMaxF = yuanToFen(this.value);
+  renderList();
+});
 function renderList(){
   const years = txYears();
   if(!years.includes(viewY)) viewY = years[years.length-1];
@@ -593,6 +688,9 @@ function renderList(){
   const list = monthTxs.filter(t => {
     if(filter !== 'all' && t.type !== filter) return false;
     if(searchQ){ const s = (t.merchant+' '+t.note).toLowerCase(); if(!s.includes(searchQ)) return false; }
+    if(catF && t.cat !== catF) return false;
+    if(amtMinF !== null && t.fen < amtMinF) return false;
+    if(amtMaxF !== null && t.fen > amtMaxF) return false;
     return true;
   }).sort((a,b) => b.date - a.date);
   const box = document.getElementById('txList');
@@ -971,6 +1069,14 @@ function setStatMode(md){
   document.getElementById('statMonthSel').style.display = md==='month' ? '' : 'none';
   renderStats();
 }
+function statToday(){
+  const n = new Date();
+  statY = n.getFullYear();
+  statM = n.getMonth();
+  setStatMode('month');
+  fillStatSelects();
+  renderStats();
+}
 function fillStatSelects(){
   const ys = document.getElementById('statYearSel');
   const ms = document.getElementById('statMonthSel');
@@ -1300,6 +1406,7 @@ document.getElementById('nextM').onclick = () => setMonth(1);
 document.getElementById('dateInput').value = todayStr();
 fillMonthSelect();
 buildCatGrid();
+fillCatFilter();
 renderList();
 renderRules();
 /* PWA：注册 service worker，支持离线 */
