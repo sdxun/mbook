@@ -695,10 +695,12 @@ function quickSave(){
   if(!amt){ toast('请输入金额'); return; }
   const merchant = document.getElementById('quickMerchant').value.trim();
   const cat = document.getElementById('quickCat').value.trim();
-  parseQuick(amt + (merchant ? ' ' + merchant : '') + (cat ? ' ' + cat : ''));
+  parseQuick(amt + (merchant ? ' ' + merchant : '') + (cat ? ' ' + cat : ''), true);  /* silent：不弹中间提示 */
   closeQuick();
+  /* 一步到位：直接保存 */
+  saveManual();
 }
-function parseQuick(text){
+function parseQuick(text, silent){
   text = String(text).trim();
   /* 格式：金额 商户 [分类]，如 "23.5 瑞幸咖啡 餐饮" 或 "23.5|瑞幸咖啡|餐饮" */
   let parts = text.split(/[|,，]/).map(x=>x.trim());
@@ -717,7 +719,7 @@ function parseQuick(text){
   document.getElementById('amountInput').value = parts[0];
   document.getElementById('merchantInput').value = merchant;
   if(cat){ curCat = cat; buildCatGrid(); }
-  toast('已填入，点下方保存 ✓');
+  if(!silent) toast('已填入，点下方保存 ✓');
 }
 function fillFromUrl(){
   const qs = location.search;
