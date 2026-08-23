@@ -458,7 +458,7 @@ details[open] summary::before{content:"▾ ";}
   <div class="sheet-head"><span class="st">📋 快速记账</span><button onclick="closeQuick()">取消</button></div>
   <div class="field"><label>金额</label><input id="quickAmt" type="text" inputmode="decimal" placeholder="如：23.5"></div>
   <div class="field"><label>商户</label><input id="quickMerchant" type="text" placeholder="如：瑞幸咖啡"></div>
-  <div class="field"><label>分类（可留空自动识别）</label><input id="quickCat" type="text" placeholder="如：餐饮 或 🍜"></div>
+  <div class="field"><label>分类（选「自动」按商户识别）</label><select id="quickCat"><option value="">🤖 自动识别</option></select></div>
   <button class="btn-primary" style="margin-top:14px;width:100%" onclick="quickSave()">填入记账表单</button>
 </div>
 
@@ -678,10 +678,12 @@ function amtOp(op){
 }
 /* ============ 快捷指令 ============ */
 function quickFill(){
-  /* 弹出三框：金额 / 商户 / 分类 */
+  /* 弹出三框：金额 / 商户 / 分类（下拉列出所有分类） */
   document.getElementById('quickAmt').value = '';
   document.getElementById('quickMerchant').value = '';
-  document.getElementById('quickCat').value = '';
+  const sel = document.getElementById('quickCat');
+  sel.innerHTML = '<option value="">🤖 自动识别</option>' + CATS.map(c => '<option value="' + c.id + '">' + (c.icon||'') + ' ' + c.id + '</option>').join('');
+  sel.value = '';
   document.getElementById('quickMask').classList.add('show');
   document.getElementById('quickSheet').classList.add('show');
   document.getElementById('quickAmt').focus();
@@ -694,7 +696,7 @@ function quickSave(){
   const amt = document.getElementById('quickAmt').value.trim();
   if(!amt){ toast('请输入金额'); return; }
   const merchant = document.getElementById('quickMerchant').value.trim();
-  const cat = document.getElementById('quickCat').value.trim();
+  const cat = document.getElementById('quickCat').value;  /* 下拉选中的分类 id（''=自动识别） */
   parseQuick(amt + (merchant ? ' ' + merchant : '') + (cat ? ' ' + cat : ''), true);  /* silent：不弹中间提示 */
   closeQuick();
   /* 一步到位：直接保存 */
