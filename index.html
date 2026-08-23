@@ -911,6 +911,24 @@ function parseAlipay(rows){
   if(amtI<0 || ci.type<0 || timeI<0 || ci.merchant<0 || ci.status<0) return null;
   const isNew = ci.cat2 >= 0; // 新版表头有「交易分类」列
   const bills = [];
+  /* 退款冲减：先扫一遍收集退款单对应的原单号（退款单号 = 原单号 + "_" + 后缀），导入时跳过原支出 */
+  const refundOrigins = new Set();
+  for(let r = hi+1; r < rows.length; r++){
+    const row = rows[r];
+    const st = row[ci.status] || '';
+    const t = row[ci.type];
+    const idVal = (ci.id>=0 ? row[ci.id] : '') || (ci.id2>=0 ? row[ci.id2] : '');
+    const isRef = st.includes('退款')
+      || (ci.refund >= 0 && (parseFloat(row[ci.refund]) || 0) > 0)
+      || (ci.ttype >= 0 && (row[ci.ttype]||'').includes('退款'))
+      || (ci.cat2 >= 0 && (row[ci.cat2]||'').includes('退款'));
+    if(isRef && idVal){
+      const iv = String(idVal).trim();
+      const u = iv.indexOf('_');
+      if(u > 0) refundOrigins.add(iv.slice(0, u));
+      else refundOrigins.add(iv);
+    }
+  }
   for(let r = hi+1; r < rows.length; r++){
     const row = rows[r];
     if(row.length <= Math.max(amtI, ci.status)) continue;
@@ -926,6 +944,9 @@ function parseAlipay(rows){
       || (ci.ttype >= 0 && (row[ci.ttype]||'').includes('退款'))
       || (ci.cat2 >= 0 && (row[ci.cat2]||'').includes('退款'));
     if(isRefund) continue;
+    /* 过滤4：冲减——该笔原单已被退款，跳过原支出（避免"支出计了、退款又单独出现"） */
+    const idVal2 = (ci.id>=0 ? row[ci.id] : '') || (ci.id2>=0 ? row[ci.id2] : '');
+    if(idVal2 && refundOrigins.has(String(idVal2).trim())) continue;
     const fen = yuanToFen(row[amtI]);
     if(fen === null || fen <= 0) continue;
     const d = new Date(row[timeI].replace(' ','T'));
