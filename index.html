@@ -204,14 +204,18 @@ details[open] summary::before{content:"▾ ";}
   <section id="page-stats" class="page">
     <div class="card">
       <div class="stat-3">
-        <div><span class="lbl">本月支出</span><span class="big red" id="stExp">¥0.00</span></div>
-        <div><span class="lbl">本月收入</span><span class="big green" id="stInc">¥0.00</span></div>
+        <div><span class="lbl" id="stLabel">本月支出</span><span class="big red" id="stExp">¥0.00</span></div>
+        <div><span class="lbl">收入</span><span class="big green" id="stInc">¥0.00</span></div>
         <div><span class="lbl">结余</span><span class="big" id="stBal">¥0.00</span></div>
+      </div>
+      <div class="seg">
+        <button class="seg-btn active" id="segMonth" onclick="setStatRange('month')">本月</button>
+        <button class="seg-btn" id="segYear" onclick="setStatRange('year')">今年</button>
       </div>
     </div>
     <div class="card"><h3>近 7 天支出</h3><div class="bar-chart" id="barChart"></div></div>
-    <div class="card"><h3>本月支出分类</h3><div id="catBreak"></div></div>
-    <div class="card"><h3>本月收入分类</h3><div id="incBreak"></div></div>
+    <div class="card"><h3 id="catBrkTitle">本月支出分类</h3><div id="catBreak"></div></div>
+    <div class="card"><h3 id="incBrkTitle">本月收入分类</h3><div id="incBreak"></div></div>
   </section>
 
   <!-- 自动记账 -->
@@ -786,15 +790,29 @@ function clearLearned(){
 }
 
 /* ============ 统计 ============ */
+let statRange = 'month'; // month | year
+function setStatRange(r){
+  statRange = r;
+  document.getElementById('segMonth').classList.toggle('active', r==='month');
+  document.getElementById('segYear').classList.toggle('active', r==='year');
+  renderStats();
+}
 function renderStats(){
   const now = new Date();
   const y = now.getFullYear(), m = now.getMonth();
-  const monthTxs = txs.filter(t => { const d = new Date(t.date); return d.getFullYear()===y && d.getMonth()===m; });
-  const exp = monthTxs.filter(t=>t.type==='expense').reduce((a,t)=>a+t.fen,0);
-  const inc = monthTxs.filter(t=>t.type==='income').reduce((a,t)=>a+t.fen,0);
+  const inRange = statRange==='month'
+    ? t => { const d = new Date(t.date); return d.getFullYear()===y && d.getMonth()===m; }
+    : t => new Date(t.date).getFullYear()===y;
+  const rangeTxs = txs.filter(inRange);
+  const exp = rangeTxs.filter(t=>t.type==='expense').reduce((a,t)=>a+t.fen,0);
+  const inc = rangeTxs.filter(t=>t.type==='income').reduce((a,t)=>a+t.fen,0);
+  const pre = statRange==='month' ? '本月' : '今年';
+  document.getElementById('stLabel').textContent = pre+'支出';
   document.getElementById('stExp').textContent = '¥'+fmtFen(exp);
   document.getElementById('stInc').textContent = '¥'+fmtFen(inc);
   document.getElementById('stBal').textContent = '¥'+fmtFen(inc-exp);
+  document.getElementById('catBrkTitle').textContent = pre+'支出分类';
+  document.getElementById('incBrkTitle').textContent = pre+'收入分类';
   /* 近7天 */
   const chart = document.getElementById('barChart');
   chart.innerHTML = '';
@@ -819,9 +837,9 @@ function renderStats(){
   const brk = document.getElementById('catBreak');
   brk.innerHTML = '';
   const byCat = {};
-  monthTxs.filter(t=>t.type==='expense').forEach(t => { byCat[t.cat] = (byCat[t.cat]||0) + t.fen; });
+  rangeTxs.filter(t=>t.type==='expense').forEach(t => { byCat[t.cat] = (byCat[t.cat]||0) + t.fen; });
   const entries = Object.entries(byCat).sort((a,b)=>b[1]-a[1]);
-  if(!entries.length){ brk.appendChild(el('div','empty','本月暂无支出')); return; }
+  if(!entries.length){ brk.appendChild(el('div','empty',pre+'暂无支出')); return; }
   const total = entries.reduce((a,e)=>a+e[1],0);
   entries.forEach(([cat, fen]) => {
     const row = el('div','sb-row');
@@ -838,9 +856,9 @@ function renderStats(){
   const ibrk = document.getElementById('incBreak');
   ibrk.innerHTML = '';
   const byIncCat = {};
-  monthTxs.filter(t=>t.type==='income').forEach(t => { byIncCat[t.cat] = (byIncCat[t.cat]||0) + t.fen; });
+  rangeTxs.filter(t=>t.type==='income').forEach(t => { byIncCat[t.cat] = (byIncCat[t.cat]||0) + t.fen; });
   const ientries = Object.entries(byIncCat).sort((a,b)=>b[1]-a[1]);
-  if(!ientries.length){ ibrk.appendChild(el('div','empty','本月暂无收入')); return; }
+  if(!ientries.length){ ibrk.appendChild(el('div','empty',pre+'暂无收入')); return; }
   const itotal = ientries.reduce((a,e)=>a+e[1],0);
   ientries.forEach(([cat, fen]) => {
     const row = el('div','sb-row');
