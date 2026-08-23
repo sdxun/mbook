@@ -1676,15 +1676,20 @@ function renderLineChart(container, bars, max){
   if(area) svg += '<path class="ln-area" d="'+area+'"/>';
   if(line) svg += '<path class="ln" d="'+line+'"/>';
   /* 数据点 + 日期 + 金额 */
+  let lastAmtX = -1e9;   /* 上一个金额标签的 x，用于防重叠 */
   pts.forEach((p,i) => {
     const d = bars[i];
     const dot = d.fen > 0 ? 'dot' : 'dot-zero';
     svg += '<circle class="'+dot+'" cx="'+p[0].toFixed(1)+'" cy="'+p[1].toFixed(1)+'" r="3"/>';
     /* 日期标签隔 5 天显示，避免重叠 */
     if(i%5===0 || i===n-1) svg += '<text class="lbl" x="'+p[0].toFixed(1)+'" y="'+(H-6)+'">'+d.label+'</text>';
-    /* 金额：有支出才显示；支出天数多时隔天显示 */
-    if(d.fen > 0 && (spendDays <= 10 || i%2===0)){
-      svg += '<text class="amt" x="'+p[0].toFixed(1)+'" y="'+(p[1]-7).toFixed(1)+'">¥'+fmtFen(d.fen)+'</text>';
+    /* 金额：有支出才显示；按文本宽度智能间隔，避免挤在一起 */
+    if(d.fen > 0){
+      const lbl = '¥'+fmtFen(d.fen);
+      const w = 5.5*lbl.length + 6;   /* 近似文本宽度(px) */
+      if(p[0] - lastAmtX < w) return; /* 与上一个标签重叠 → 跳过，保留时间轴上的大间隔 */
+      lastAmtX = p[0];
+      svg += '<text class="amt" x="'+p[0].toFixed(1)+'" y="'+(p[1]-7).toFixed(1)+'">'+lbl+'</text>';
     }
   });
   svg += '</svg>';
