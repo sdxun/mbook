@@ -556,7 +556,7 @@ function buildCatGrid(){
 }
 
 /* ============ 分类管理 ============ */
-var CAT_ICONS = ['🍜','🚗','🛍️','🎮','💊','🏠','📱','👕','🎁','✈️','🎬','📚','🐶','🐱','💄','⚽','☕','🍺','🧾','💼','👶','💍','🔧','🌿','🍔','🍟','🍱','🍣','🍰','🍎','🥤','🧋','🎂','🍿','🏋️','🚲','🛵','🚕','✂️','💇','💻','📷','🎧','⛽','🅿️','🏥','🦷','👓','👜','🧸','🎨','🎤'];
+var CAT_ICONS = ['🏷️','🍜','🚗','🛍️','🎮','💊','🏠','📱','👕','🎁','✈️','🎬','📚','🐶','🐱','💄','⚽','☕','🍺','🧾','💼','👶','💍','🔧','🌿','🍔','🍟','🍱','🍣','🍰','🍎','🥤','🧋','🎂','🍿','🏋️','🚲','🛵','🚕','✂️','💇','💻','📷','🎧','⛽','🅿️','🏥','🦷','👓','👜','🧸','🎨','🎤'];
 var curCatIcon = '🏷️';
 var editCatIconId = null; // 正在编辑图标的分类 id，null=新增分类模式
 function renderCatEmoji(){
@@ -1419,6 +1419,14 @@ function exportCSV(){
   txs.slice().sort((a,b)=>a.date-b.date).forEach(t => {
     lines.push([fmtDateTime(t.date), t.type==='expense'?'支出':'收入', t.cat, t.merchant, t.note, fmtFen(t.fen), t.source].map(csvEsc).join(','));
   });
+  const exp = txs.filter(t=>t.type==='expense').reduce((a,t)=>a+t.fen,0);
+  const inc = txs.filter(t=>t.type==='income').reduce((a,t)=>a+t.fen,0);
+  lines.push('');
+  lines.push('# 导出备注');
+  lines.push('# 导出时间：' + new Date().toLocaleString());
+  lines.push('# 账单笔数：' + txs.length + ' 笔');
+  lines.push('# 总支出：' + fmtFen(exp) + ' 元，总收入：' + fmtFen(inc) + ' 元');
+  lines.push('# 说明：本文件由「随手记」导出，含所有记账数据，可重新导入。');
   const blob = new Blob(['\uFEFF'+lines.join('\n')], {type:'text/csv;charset=utf-8'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
